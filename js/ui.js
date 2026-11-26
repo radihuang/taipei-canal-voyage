@@ -87,12 +87,97 @@ export class GameUI {
       });
     });
 
-    // 開始按鈕
-    const startBtn = document.getElementById("start-btn");
+    // 開始畫面：登船啟航，或先看一步一步的登船須知
     const overlay = document.getElementById("welcome-overlay");
-    startBtn?.addEventListener("click", () => {
-      overlay?.classList.add("fade-out");
-      setTimeout(() => overlay?.remove(), 480);
+    const start = () => {
+      if (!overlay || overlay.classList.contains("fade-out")) return;
+      overlay.classList.add("fade-out");
+      setTimeout(() => overlay.remove(), 480);
+    };
+    document.getElementById("start-btn")?.addEventListener("click", start);
+    document.getElementById("guide-skip")?.addEventListener("click", start);
+    this._bindGuide(start);
+
+    this._bindPanelToggle();
+  }
+
+  _bindGuide(start) {
+    const guide = document.getElementById("guide");
+    if (!guide) return;
+    const choices = document.getElementById("welcome-choices");
+    const desc = document.querySelector(".welcome-desc");
+    const prevBtn = document.getElementById("guide-prev");
+    const nextBtn = document.getElementById("guide-next");
+    const dots = document.getElementById("guide-dots");
+    dots.replaceChildren(...GUIDE_STEPS.map(() => document.createElement("span")));
+    let step = 0;
+
+    const render = () => {
+      const s = GUIDE_STEPS[step];
+      const last = step === GUIDE_STEPS.length - 1;
+      document.getElementById("guide-progress").textContent = `登船須知 ${step + 1} / ${GUIDE_STEPS.length}`;
+      document.getElementById("guide-icon").textContent = s.icon;
+      document.getElementById("guide-title").textContent = s.title;
+      document.getElementById("guide-text").textContent = s.text;
+      [...dots.children].forEach((d, i) => d.classList.toggle("active", i === step));
+      prevBtn.textContent = step === 0 ? "返回" : "上一步";
+      nextBtn.textContent = last ? "登船啟航" : "下一步";
+      nextBtn.classList.toggle("is-final", last);
+      document.getElementById("guide-skip").classList.toggle("hidden", last);
+    };
+
+    document.getElementById("guide-btn")?.addEventListener("click", () => {
+      step = 0;
+      choices.classList.add("hidden");
+      desc?.classList.add("hidden");
+      guide.classList.remove("hidden");
+      render();
+      nextBtn.focus();
+    });
+    prevBtn.addEventListener("click", () => {
+      if (step === 0) {
+        guide.classList.add("hidden");
+        choices.classList.remove("hidden");
+        desc?.classList.remove("hidden");
+        document.getElementById("guide-btn").focus();
+        return;
+      }
+      step--;
+      render();
+    });
+    nextBtn.addEventListener("click", () => {
+      if (step === GUIDE_STEPS.length - 1) return start();
+      step++;
+      render();
+    });
+  }
+
+  // 左上面板的「知識卡」與換船按鈕可以收起來，少擋一點畫面；收合狀態記在瀏覽器
+  _bindPanelToggle() {
+    const btn = document.getElementById("panel-toggle");
+    const extras = document.getElementById("panel-extras");
+    if (!btn || !extras) return;
+    const KEY = "taipei-canal-voyage:panel-collapsed";
+    const apply = (collapsed) => {
+      extras.classList.toggle("hidden", collapsed);
+      btn.setAttribute("aria-expanded", String(!collapsed));
+      btn.textContent = collapsed ? "📖 知識卡・⛵ 換船 ▾" : "收起知識卡與船 ▴";
+    };
+    let collapsed = false;
+    try {
+      collapsed = localStorage.getItem(KEY) === "1";
+    } catch {
+      // 無痕模式讀不到就用預設（展開）
+    }
+    apply(collapsed);
+    btn.addEventListener("click", () => {
+      collapsed = !collapsed;
+      apply(collapsed);
+      try {
+        localStorage.setItem(KEY, collapsed ? "1" : "0");
+      } catch {
+        // 存不進去就只在這一局有效
+      }
     });
   }
 
@@ -726,6 +811,16 @@ export class GameUI {
     );
   }
 }
+
+const GUIDE_STEPS = [
+  { icon: "🕹️", title: "開船", text: "電腦用 WASD 或方向鍵；手機用左下角的搖桿。滾輪或雙指可以把視角拉近拉遠。" },
+  { icon: "👋", title: "交朋友", text: "靠近河道上的其他船，按 Space 或點右下角的「交朋友」。交友分數累積到 30 分解鎖五人帆船，80 分解鎖十人海盜船。" },
+  { icon: "⛵", title: "搭別人的船", text: "靠近帆船或海盜船，按 E 或點「搭便車」，就能收起自己的船、跳上對方甲板一起漂流。" },
+  { icon: "🙋", title: "載客", text: "開帆船或海盜船時，靠近岸邊舉手的人就會上船。開到他頭上寫的目的地旁的運河就送達，路程越遠分數越高，還會拿到一張在地知識卡。" },
+  { icon: "❗", title: "岸邊尋寶", text: "開到岸邊的樹旁時，樹上可能冒出「！」，點一下就會發現藏在樹上的台灣動物。" },
+  { icon: "📖", title: "知識卡收藏冊", text: "左上面板的「📖 知識卡」隨時打開收藏冊。覺得面板擋畫面時，點面板下方的「收起知識卡與船」，要用再展開。" },
+  { icon: "🌅", title: "換個時段", text: "右上角的四個圖示切換清晨、正午、夕陽、夜晚，夜晚窗戶和橋燈會亮起來。" }
+];
 
 // 動物卡的圖；圖檔不在時整個藏起來，不留破圖
 function setCardImage(img, card) {

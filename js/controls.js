@@ -147,6 +147,59 @@ export class InputController {
     for (const type of ["gesturestart", "gesturechange"]) {
       document.addEventListener(type, blockPageZoom, { passive: false });
     }
+
+    // iPhone 連點兩下會放大整頁（double-tap zoom），gesture 事件與 touch-action 都擋不到它。
+    // 兩次觸控結束間隔很短時，取消第二下的預設行為；取消後 Safari 不會再送 click，
+    // 所以第二下若點在按鈕或連結上，自己補一次 click，連點按鈕照樣有反應。
+    let lastTouchEnd = 0;
+    document.addEventListener(
+      "touchend",
+      (e) => {
+        const now = performance.now();
+        if (e.touches.length === 0 && e.changedTouches.length === 1 && now - lastTouchEnd < 350) {
+          e.preventDefault();
+          e.target.closest?.("button, a[href]")?.click();
+        }
+        lastTouchEnd = now;
+      },
+      { passive: false }
+    );
+
+    this._bindPageZoomRecovery();
+  }
+
+  // 還是被放大時的退路：整頁放行雙指（css 的 html.page-zoomed），並在可見範圍上方顯示「還原畫面大小」
+  _bindPageZoomRecovery() {
+    const vv = window.visualViewport;
+    const btn = document.getElementById("zoom-reset");
+    if (!vv || !btn) return;
+    const root = document.documentElement;
+    const sync = () => {
+      const zoomed = vv.scale > 1.01;
+      root.classList.toggle("page-zoomed", zoomed);
+      btn.classList.toggle("hidden", !zoomed);
+      if (zoomed) {
+        // 放大時 position: fixed 是對整頁定位，要換算到使用者正在看的那一塊，並縮回正常大小
+        btn.style.left = `${vv.offsetLeft + vv.width / 2}px`;
+        btn.style.top = `${vv.offsetTop + 12 / vv.scale}px`;
+        btn.style.transform = `translateX(-50%) scale(${1 / vv.scale})`;
+        btn.style.transformOrigin = "top center";
+      }
+    };
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    btn.addEventListener("click", () => {
+      // 改一次 viewport 設定會讓 Safari 重新套用縮放上限、跳回原尺寸；之後換回原本的設定
+      const meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) return;
+      const original = meta.getAttribute("content");
+      meta.setAttribute("content", "width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover");
+      setTimeout(() => {
+        meta.setAttribute("content", original);
+        sync();
+      }, 400);
+    });
+    sync();
   }
 
   /**

@@ -54,6 +54,7 @@
         <span class="passenger-dests" id="passenger-dests"></span>
       </div>
 
+      <div class="panel-extras" id="panel-extras">
       <button class="collection-btn" id="collection-btn" type="button" aria-haspopup="dialog">
         📖 知識卡 <span id="collection-count">0 / 10</span>
       </button>
@@ -72,15 +73,18 @@
           <span class="pill-cap">10人</span>
         </button>
       </div>
+      </div>
+
+      <button class="panel-toggle" id="panel-toggle" type="button" aria-controls="panel-extras" aria-expanded="true">收起知識卡與船 ▴</button>
     </div>
 
     <!-- Right: Time of Day & Minimap -->
     <div class="right-column">
       <div class="glass-card time-panel" id="time-selector">
-        <button class="time-btn" data-time="dawn">清晨</button>
-        <button class="time-btn active" data-time="noon">正午</button>
-        <button class="time-btn" data-time="sunset">夕陽</button>
-        <button class="time-btn" data-time="night">夜晚</button>
+        <button class="time-btn" data-time="dawn" type="button" title="清晨" aria-label="清晨"><span aria-hidden="true">🌅</span></button>
+        <button class="time-btn active" data-time="noon" type="button" title="正午" aria-label="正午"><span aria-hidden="true">☀️</span></button>
+        <button class="time-btn" data-time="sunset" type="button" title="夕陽" aria-label="夕陽"><span aria-hidden="true">🌇</span></button>
+        <button class="time-btn" data-time="night" type="button" title="夜晚" aria-label="夜晚"><span aria-hidden="true">🌙</span></button>
       </div>
 
       <div class="glass-card minimap-card">
@@ -170,17 +174,28 @@
         當忠孝、仁愛、信義、敦化化為靜謐運河。<br />
         划著你的橘色小船穿梭在幾何台北，結識岸邊與河道上的船友，從單人 SUP 升級至五人帆船與十人海盜船，也能隨時收起自己的船，跳上別人的甲板一起看夕陽。
       </p>
-      <div class="welcome-tips">
-        <div class="tip-chip"><strong>移動</strong> WASD / 方向鍵 / 左下搖桿</div>
-        <div class="tip-chip"><strong>交朋友</strong> 靠近按 Space 或點擊 👋</div>
-        <div class="tip-chip"><strong>搭別人的船</strong> 靠近帆船/海盜船按 E</div>
-        <div class="tip-chip"><strong>載客</strong> 開帆船以上，靠近岸邊舉手的人就會上船</div>
-        <div class="tip-chip"><strong>尋寶</strong> 岸邊的樹冒出「！」就點一下</div>
-        <div class="tip-chip"><strong>視角</strong> 滾輪或雙指可縮放遠近</div>
+      <div class="welcome-choices" id="welcome-choices">
+        <button class="guide-btn" id="guide-btn" type="button">登船須知</button>
+        <button class="start-btn" id="start-btn" type="button">登船啟航</button>
       </div>
-      <button class="start-btn" id="start-btn">下水啟航</button>
+      <!-- 登船須知：一次一步，內容在 js/ui.js 的 GUIDE_STEPS -->
+      <div class="guide hidden" id="guide" aria-live="polite">
+        <div class="guide-progress" id="guide-progress"></div>
+        <div class="guide-icon" id="guide-icon" aria-hidden="true"></div>
+        <h2 class="guide-title" id="guide-title"></h2>
+        <p class="guide-text" id="guide-text"></p>
+        <div class="guide-dots" id="guide-dots" aria-hidden="true"></div>
+        <div class="guide-nav">
+          <button class="guide-prev" id="guide-prev" type="button">上一步</button>
+          <button class="guide-next" id="guide-next" type="button">下一步</button>
+        </div>
+        <button class="guide-skip" id="guide-skip" type="button">直接登船啟航</button>
+      </div>
     </div>
   </div>
+
+  <!-- iPhone 整頁被放大時才出現 -->
+  <button class="zoom-reset hidden" id="zoom-reset" type="button">還原畫面大小</button>
 
   <script type="module" src="js/main.js"></script>
 </body>

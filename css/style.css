@@ -52,6 +52,33 @@ html, body {
   touch-action: pan-y;
 }
 
+/* 萬一還是被放大了（例如 iPhone 連點兩下），上面那組 none 會連「縮回來」的雙指也擋掉，
+   所以一偵測到放大就整頁放行，縮回原尺寸後 js/controls.js 會把這個 class 拿掉 */
+html.page-zoomed,
+html.page-zoomed *,
+html.page-zoomed *::before,
+html.page-zoomed *::after {
+  touch-action: auto !important;
+}
+
+.zoom-reset {
+  position: fixed;
+  left: 50%;
+  top: max(12px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  z-index: 60;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: var(--orange);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 20px rgba(242, 107, 58, 0.4);
+  cursor: pointer;
+}
+
 #canvas-container {
   position: fixed;
   inset: 0;
@@ -273,12 +300,23 @@ body.theme-night .boat-pill {
   border: none;
   background: transparent;
   color: var(--ink-soft);
-  padding: 6px 11px;
+  padding: 6px 9px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.22s ease;
+}
+
+.time-btn span {
+  display: block;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.time-btn:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
 }
 
 .time-btn.active {
@@ -425,6 +463,34 @@ body.theme-night .knowledge-sources a {
 }
 
 /* 知識卡收藏冊 */
+.panel-toggle {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.panel-toggle:hover {
+  background: rgba(242, 107, 58, 0.08);
+}
+
+.panel-toggle:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 1px;
+}
+
+body.theme-night .panel-toggle {
+  color: rgba(235, 240, 250, 0.75);
+}
+
 .collection-btn {
   display: block;
   width: 100%;
@@ -981,6 +1047,130 @@ body.theme-night .collection-back {
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+.welcome-choices {
+  display: flex;
+  gap: 10px;
+}
+
+.welcome-choices .start-btn {
+  flex: 1.2;
+  width: auto;
+  padding: 13px 16px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.guide-btn,
+.guide-prev {
+  flex: 1;
+  border: 1.5px solid rgba(242, 107, 58, 0.45);
+  border-radius: 999px;
+  padding: 13px 16px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--orange-deep);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.guide-btn:hover,
+.guide-prev:hover {
+  background: rgba(242, 107, 58, 0.08);
+}
+
+.guide-btn:focus-visible,
+.guide-prev:focus-visible,
+.guide-next:focus-visible,
+.guide-skip:focus-visible,
+.start-btn:focus-visible {
+  outline: 2px solid var(--orange-deep);
+  outline-offset: 3px;
+}
+
+.guide-progress {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 0.08em;
+}
+
+.guide-icon {
+  font-size: 44px;
+  line-height: 1;
+  margin: 14px 0 8px;
+}
+
+.guide-title {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.guide-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: #546075;
+  text-align: left;
+  min-height: calc(1.75em * 4);
+}
+
+.guide-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 14px 0 16px;
+}
+
+.guide-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(242, 107, 58, 0.22);
+  transition: width 0.2s ease;
+}
+
+.guide-dots span.active {
+  width: 18px;
+  border-radius: 999px;
+  background: var(--orange);
+}
+
+.guide-nav {
+  display: flex;
+  gap: 10px;
+}
+
+.guide-next {
+  flex: 1.2;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 16px;
+  background: linear-gradient(135deg, #ff8957, #f26b3a);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(242, 107, 58, 0.32);
+}
+
+.guide-skip {
+  margin-top: 12px;
+  border: none;
+  background: none;
+  color: #7a8599;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
 .start-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 30px rgba(242, 107, 58, 0.45);
@@ -1053,5 +1243,14 @@ body.theme-night .collection-back {
 
   .welcome-tips {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 320–360px 寬：四個時段圖示排成一列會把右欄擠出畫面，改成 2 × 2 */
+@media (max-width: 360px) {
+  .time-panel {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    border-radius: 16px;
   }
 }
