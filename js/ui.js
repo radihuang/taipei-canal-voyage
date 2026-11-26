@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { WORLD_CONFIG, BOAT_TIERS, DISTRICT_GRID, DISTRICTS, TREE_NAMES, blockIndexAt } from "./config.js";
+import { WORLD_CONFIG, BOAT_TIERS, DISTRICT_GRID, DISTRICTS, LANDMARKS, TREE_NAMES, blockIndexAt } from "./config.js";
 
 export class GameUI {
   constructor({ onSelectTime, onSelectBoat }) {
@@ -40,6 +40,29 @@ export class GameUI {
     this.knowledgeSourcesEl = document.getElementById("knowledge-sources");
     this.knowledgeTimer = null;
     document.getElementById("knowledge-close").addEventListener("click", () => this.hideKnowledgeCard());
+
+    this.collection = null; // initCollection 之後才有
+    this.collectionBtn = document.getElementById("collection-btn");
+    this.collectionCountEl = document.getElementById("collection-count");
+    this.collectionEl = document.getElementById("collection-overlay");
+    this.collectionProgressEl = document.getElementById("collection-progress");
+    this.collectionGridEl = document.getElementById("collection-grid");
+    this.collectionDetailEl = document.getElementById("collection-detail");
+    this.collectionFooterEl = document.getElementById("collection-footer");
+    this.collectionClearBtn = document.getElementById("collection-clear");
+    this.collectionClearArmed = false;
+    this.collectionBtn.addEventListener("click", () => this.openCollection());
+    document.getElementById("collection-close").addEventListener("click", () => this.closeCollection());
+    document.getElementById("collection-back").addEventListener("click", () => this._showCollectionGrid());
+    this.collectionClearBtn.addEventListener("click", () => this._onClearClick());
+    this.collectionEl.addEventListener("click", (e) => {
+      if (e.target === this.collectionEl) this.closeCollection();
+    });
+    // 收藏冊開著時，按鍵不傳給遊戲（否則在卡片上按 Enter 會同時觸發登船）
+    this.collectionEl.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") this.closeCollection();
+      e.stopPropagation();
+    });
 
     this.npcDomMap = new Map();
     this.playerBubbleEl = this._createBubbleEl();
@@ -369,20 +392,7 @@ export class GameUI {
     this.knowledgeTitleEl.textContent = card.title;
     this.knowledgeBodyEl.textContent = card.body;
 
-    this.knowledgeSourcesEl.replaceChildren();
-    const addLink = (prefix, src) => {
-      const li = document.createElement("li");
-      li.append(prefix);
-      const a = document.createElement("a");
-      a.href = src.url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = src.label;
-      li.append(a);
-      this.knowledgeSourcesEl.append(li);
-    };
-    card.sources.forEach((src, i) => addLink(i === 0 ? "來源：" : "核對：", src));
-    addLink("授權：", license);
+    this._renderSources(this.knowledgeSourcesEl, card, license);
 
     this.knowledgeEl.classList.remove("hidden");
     clearTimeout(this.knowledgeTimer);
@@ -392,6 +402,124 @@ export class GameUI {
   hideKnowledgeCard() {
     clearTimeout(this.knowledgeTimer);
     this.knowledgeEl.classList.add("hidden");
+  }
+
+  _renderSources(ul, card, license) {
+    ul.replaceChildren();
+    const addLink = (prefix, src) => {
+      const li = document.createElement("li");
+      li.append(prefix);
+      const a = document.createElement("a");
+      a.href = src.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = src.label;
+      li.append(a);
+      ul.append(li);
+    };
+    card.sources.forEach((src, i) => addLink(i === 0 ? "來源：" : "核對：", src));
+    addLink("授權：", license);
+  }
+
+  // 知識卡收藏冊。collected 是 main.js 那份 Set，這裡只讀，清空交給 onClear。
+  initCollection({ cards, license, collected, onClear }) {
+    this.collection = { cards, license, collected, onClear };
+    this.updateCollectionCount();
+  }
+
+  updateCollectionCount() {
+    const { cards, collected } = this.collection;
+    this.collectionCountEl.textContent = `${collected.size} / ${Object.keys(cards).length}`;
+  }
+
+  openCollection() {
+    if (!this.collection) return;
+    this.hideKnowledgeCard();
+    this._showCollectionGrid();
+    this.collectionEl.classList.remove("hidden");
+    document.getElementById("collection-close").focus();
+  }
+
+  closeCollection() {
+    this.collectionEl.classList.add("hidden");
+    this._disarmClear();
+    // 焦點不還給 HUD 按鈕：Enter 是登船鍵，留在按鈕上會被當成再點一次
+    document.activeElement?.blur();
+  }
+
+  _showCollectionGrid() {
+    const { cards, collected } = this.collection;
+    const keys = Object.keys(cards);
+    this.collectionProgressEl.textContent = `已收集 ${collected.size} / ${keys.length} 張，送乘客到目的地就會解鎖。`;
+
+    this.collectionGridEl.replaceChildren();
+    for (const key of keys) {
+      const card = cards[key];
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "collection-tile";
+      const title = document.createElement("span");
+      title.className = "collection-tile-title";
+      const hint = document.createElement("span");
+      hint.className = "collection-tile-hint";
+      if (collected.has(key)) {
+        title.textContent = card.title;
+        // 地標卡的卡名就是地名，不重複寫
+        const label = destLabel(key, card);
+        hint.textContent = label === card.title ? "地標" : label;
+        tile.addEventListener("click", () => this._showCollectionDetail(key));
+      } else {
+        tile.classList.add("locked");
+        tile.disabled = true;
+        title.textContent = "？？？";
+        const name = document.createElement("span");
+        name.className = "nowrap";
+        name.textContent = `「${destLabel(key, card)}」`;
+        hint.append("把乘客送到", name, "解鎖");
+      }
+      tile.append(title, hint);
+      this.collectionGridEl.append(tile);
+    }
+
+    this.collectionClearBtn.disabled = collected.size === 0;
+    this.collectionGridEl.classList.remove("hidden");
+    this.collectionProgressEl.classList.remove("hidden");
+    this.collectionFooterEl.classList.remove("hidden");
+    this.collectionDetailEl.classList.add("hidden");
+  }
+
+  _showCollectionDetail(key) {
+    const { cards, license } = this.collection;
+    const card = cards[key];
+    document.getElementById("collection-detail-title").textContent = card.title;
+    document.getElementById("collection-detail-body").textContent = card.body;
+    this._renderSources(document.getElementById("collection-detail-sources"), card, license);
+    this._disarmClear();
+    this.collectionGridEl.classList.add("hidden");
+    this.collectionProgressEl.classList.add("hidden");
+    this.collectionFooterEl.classList.add("hidden");
+    this.collectionDetailEl.classList.remove("hidden");
+    document.getElementById("collection-back").focus();
+  }
+
+  // 清空要按兩次，避免誤觸；離開收藏冊或切到單張卡時重設
+  _onClearClick() {
+    if (!this.collectionClearArmed) {
+      this.collectionClearArmed = true;
+      this.collectionClearBtn.textContent = "確定清空？再按一次";
+      this.collectionClearBtn.classList.add("armed");
+      return;
+    }
+    this._disarmClear();
+    this.collection.onClear();
+    this.updateCollectionCount();
+    this._showCollectionGrid();
+  }
+
+  _disarmClear() {
+    this.collectionClearArmed = false;
+    this.collectionClearBtn.textContent = "清空收藏";
+    this.collectionClearBtn.classList.remove("armed");
   }
 
   // 小地圖：以玩家為中心顯示附近約 4 x 4 個街廓，並標出行政區名
@@ -502,4 +630,11 @@ export class GameUI {
       [...acc].map(([name, [sx, sz, n]]) => [name, [sx / n, sz / n]])
     );
   }
+}
+
+// 收藏冊上顯示的目的地名稱，與乘客頭上的字一致（同 passengers.js 的 label）
+function destLabel(key, card) {
+  if (key.startsWith("district:")) return `${key.slice("district:".length)}區`;
+  const lm = Object.values(LANDMARKS).find((l) => `landmark:${l.key}` === key);
+  return lm ? lm.name : card.title;
 }

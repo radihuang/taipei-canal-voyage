@@ -53,6 +53,10 @@
         <span class="passenger-dests" id="passenger-dests"></span>
       </div>
 
+      <button class="collection-btn" id="collection-btn" type="button" aria-haspopup="dialog">
+        📖 知識卡 <span id="collection-count">0 / 10</span>
+      </button>
+
       <div class="boat-switcher" id="boat-switcher">
         <button class="boat-pill active" data-tier="0">
           <span class="pill-name">SUP</span>
@@ -96,6 +100,25 @@
     <p class="knowledge-body" id="knowledge-body"></p>
     <ul class="knowledge-sources" id="knowledge-sources"></ul>
   </aside>
+
+  <!-- 知識卡收藏冊 -->
+  <div class="collection-overlay hidden" id="collection-overlay">
+    <section class="collection-panel glass-card" role="dialog" aria-modal="true" aria-labelledby="collection-heading">
+      <button class="knowledge-close" id="collection-close" type="button" aria-label="關閉收藏冊">×</button>
+      <h2 class="collection-heading" id="collection-heading">知識卡收藏冊</h2>
+      <div class="collection-progress" id="collection-progress"></div>
+      <div class="collection-grid" id="collection-grid"></div>
+      <div class="collection-detail hidden" id="collection-detail">
+        <button class="collection-back" id="collection-back" type="button">← 回收藏冊</button>
+        <h3 class="knowledge-title" id="collection-detail-title"></h3>
+        <p class="knowledge-body" id="collection-detail-body"></p>
+        <ul class="knowledge-sources" id="collection-detail-sources"></ul>
+      </div>
+      <div class="collection-footer" id="collection-footer">
+        <button class="collection-clear" id="collection-clear" type="button">清空收藏</button>
+      </div>
+    </section>
+  </div>
 
   <!-- Passenger Mode Banner -->
   <div class="passenger-banner hidden" id="passenger-banner">

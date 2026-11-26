@@ -9,6 +9,7 @@ import { PedestrianManager } from "./pedestrians.js";
 import { updateSeeThrough } from "./seeThrough.js";
 import { PassengerManager } from "./passengers.js";
 import { KNOWLEDGE_CARDS, KNOWLEDGE_LICENSE } from "./knowledgeCards.js";
+import { loadCollected, saveCollected, clearCollected } from "./cardCollection.js";
 
 // ===== 1. 建立 Three.js 場景、紀念碑谷低視角攝影機與渲染器 =====
 const container = document.getElementById("canvas-container");
@@ -92,7 +93,7 @@ scene.add(playerBoat.group);
 
 // 岸邊等船的乘客與船上乘客
 const passengers = new PassengerManager(scene, city.blocks, city.blockTop);
-const collectedCards = new Set(); // 本次遊玩已讀過的知識卡
+const collectedCards = loadCollected(Object.keys(KNOWLEDGE_CARDS));
 passengers.attachToBoat(playerBoat, BOAT_TIERS[0]);
 
 // 玩家登船後站在對方甲板上的分身小人
@@ -303,6 +304,12 @@ const ui = new GameUI({
 });
 ui.updateStats(state);
 ui.setBlocks(city.blocks);
+ui.initCollection({
+  cards: KNOWLEDGE_CARDS,
+  license: KNOWLEDGE_LICENSE,
+  collected: collectedCards,
+  onClear: () => clearCollected(collectedCards)
+});
 
 const input = new InputController({
   onGreet: handleGreet,
@@ -520,6 +527,10 @@ function animate() {
       if (card) {
         const isNew = !collectedCards.has(ev.passenger.dest.key);
         collectedCards.add(ev.passenger.dest.key);
+        if (isNew) {
+          saveCollected(collectedCards);
+          ui.updateCollectionCount();
+        }
         ui.showKnowledgeCard(card, {
           collected: collectedCards.size,
           total: Object.keys(KNOWLEDGE_CARDS).length,
