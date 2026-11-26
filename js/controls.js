@@ -138,6 +138,15 @@ export class InputController {
     canvasEl?.addEventListener("touchend", () => {
       prevPinchDist = null;
     });
+
+    // iPhone Safari 的整頁縮放走 gesture 事件（只有 WebKit 有），擋掉它不影響上面用 touchmove 做的鏡頭縮放。
+    // 已經被放大時不擋，讓玩家還能捏回去。
+    const blockPageZoom = (e) => {
+      if ((window.visualViewport?.scale ?? 1) <= 1.01) e.preventDefault();
+    };
+    for (const type of ["gesturestart", "gesturechange"]) {
+      document.addEventListener(type, blockPageZoom, { passive: false });
+    }
   }
 
   /**

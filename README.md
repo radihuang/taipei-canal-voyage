@@ -74,6 +74,7 @@ python3 -m http.server 8000
 ## 常見錯誤與處理
 - **知識卡的出處連結打不開**：政府網站偶爾改版或暫時連不上（例如公園處頁面）。卡片內容不受影響；改版造成連結失效時，到 `js/knowledgeCards.js` 更新網址。
 - **知識卡收藏不見了**：收藏存在瀏覽器裡，換瀏覽器、換裝置、用無痕模式，或清除這個網站的資料都會歸零（無痕模式下只記在當次遊玩）。iPhone 的 Safari 若連續 7 天沒開這個網站，也可能被系統自動清掉。
+- **iPhone 上整個網頁被放大、縮不回來**：iPhone Safari 不理會網頁「禁止縮放」的設定。遊戲改用每個元素各自的 `touch-action` 加上擋 Safari 的 `gesturestart` 事件來防止整頁縮放，遊戲內的雙指縮放（拉近拉遠鏡頭）不受影響。若仍遇到，重新整理頁面即可恢復；新增會捲動的面板時，記得在 `css/style.css` 把它和裡面的元素設成 `touch-action: pan-y`。
 - **直接雙擊 `index.html` 畫面全白**：ES Modules 不能用 `file://` 開，請照「本地預覽」起伺服器。
 - **`python3 -m http.server 8000` 出現 `Address already in use`**：8000 埠已被別的程式占用，換一個埠，例如 `python3 -m http.server 8001`，再開 `http://localhost:8001`。
 - **改了程式但瀏覽器還是舊畫面**：按 Cmd+Shift+R（Windows：Ctrl+Shift+R）強制重新整理。

@@ -36,6 +36,22 @@ html, body {
   touch-action: none;
 }
 
+/* 擋掉整頁縮放。iPhone Safari 不理會 user-scalable=no，而 touch-action 不會繼承，
+   遇到可捲動的元素（overflow 不是 visible）還會重新起算，所以每個元素都自己寫一次。
+   要能用手指上下捲的面板在下面改成 pan-y（可捲、不能縮放）。 */
+*,
+*::before,
+*::after {
+  touch-action: none;
+}
+
+.collection-panel,
+.collection-panel *,
+.knowledge-card,
+.knowledge-card * {
+  touch-action: pan-y;
+}
+
 #canvas-container {
   position: fixed;
   inset: 0;

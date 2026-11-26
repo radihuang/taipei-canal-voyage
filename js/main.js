@@ -593,5 +593,5 @@ animate();
 
 // 測試用：網址加上 ?debug 才會開放，讓自動化測試能直接移動船與加分
 if (new URLSearchParams(location.search).has("debug")) {
-  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat };
+  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat, getZoom: () => zoomFactor };
 }
