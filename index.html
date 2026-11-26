@@ -21,6 +21,7 @@
 
   <!-- 2D Floating Speech & Friend Labels Layer -->
   <div id="bubbles-layer"></div>
+  <div id="treasure-layer"></div>
 
   <!-- Top HUD -->
   <header class="hud-top">
@@ -96,6 +97,7 @@
   <aside class="knowledge-card glass-card hidden" id="knowledge-card" aria-live="polite">
     <button class="knowledge-close" id="knowledge-close" type="button" aria-label="關閉知識卡">×</button>
     <div class="knowledge-eyebrow" id="knowledge-eyebrow"></div>
+    <img class="knowledge-image hidden" id="knowledge-image" alt="" width="96" height="96" />
     <h3 class="knowledge-title" id="knowledge-title"></h3>
     <p class="knowledge-body" id="knowledge-body"></p>
     <ul class="knowledge-sources" id="knowledge-sources"></ul>
@@ -110,6 +112,7 @@
       <div class="collection-grid" id="collection-grid"></div>
       <div class="collection-detail hidden" id="collection-detail">
         <button class="collection-back" id="collection-back" type="button">← 回收藏冊</button>
+        <img class="knowledge-image hidden" id="collection-detail-image" alt="" width="96" height="96" />
         <h3 class="knowledge-title" id="collection-detail-title"></h3>
         <p class="knowledge-body" id="collection-detail-body"></p>
         <ul class="knowledge-sources" id="collection-detail-sources"></ul>
@@ -172,6 +175,7 @@
         <div class="tip-chip"><strong>交朋友</strong> 靠近按 Space 或點擊 👋</div>
         <div class="tip-chip"><strong>搭別人的船</strong> 靠近帆船/海盜船按 E</div>
         <div class="tip-chip"><strong>載客</strong> 開帆船以上，靠近岸邊舉手的人就會上船</div>
+        <div class="tip-chip"><strong>尋寶</strong> 岸邊的樹冒出「！」就點一下</div>
         <div class="tip-chip"><strong>視角</strong> 滾輪或雙指可縮放遠近</div>
       </div>
       <button class="start-btn" id="start-btn">下水啟航</button>

@@ -24,6 +24,7 @@ export class GameUI {
     this.boardLabel = document.getElementById("board-label");
 
     this.bubblesLayer = document.getElementById("bubbles-layer");
+    this.treasureLayer = document.getElementById("treasure-layer");
     this.toastContainer = document.getElementById("toast-container");
 
     this.minimapCanvas = document.getElementById("minimap");
@@ -35,6 +36,7 @@ export class GameUI {
 
     this.knowledgeEl = document.getElementById("knowledge-card");
     this.knowledgeEyebrowEl = document.getElementById("knowledge-eyebrow");
+    this.knowledgeImageEl = document.getElementById("knowledge-image");
     this.knowledgeTitleEl = document.getElementById("knowledge-title");
     this.knowledgeBodyEl = document.getElementById("knowledge-body");
     this.knowledgeSourcesEl = document.getElementById("knowledge-sources");
@@ -388,7 +390,10 @@ export class GameUI {
 
   // 送達知識卡：全部用 textContent／href 組裝，不用 innerHTML
   showKnowledgeCard(card, { collected, total, isNew }, license) {
-    this.knowledgeEyebrowEl.textContent = `${isNew ? "新知識卡" : "知識卡"} ${collected} / ${total}`;
+    const isAnimal = Boolean(card.image);
+    const label = isAnimal ? (isNew ? "發現台灣動物！" : "台灣動物") : isNew ? "新知識卡" : "知識卡";
+    this.knowledgeEyebrowEl.textContent = `${label} ${collected} / ${total}`;
+    setCardImage(this.knowledgeImageEl, card);
     this.knowledgeTitleEl.textContent = card.title;
     this.knowledgeBodyEl.textContent = card.body;
 
@@ -450,35 +455,23 @@ export class GameUI {
   _showCollectionGrid() {
     const { cards, collected } = this.collection;
     const keys = Object.keys(cards);
-    this.collectionProgressEl.textContent = `已收集 ${collected.size} / ${keys.length} 張，送乘客到目的地就會解鎖。`;
+    this.collectionProgressEl.textContent = `已收集 ${collected.size} / ${keys.length} 張。送乘客到目的地、在岸邊的樹上尋寶都能解鎖。`;
 
+    const sections = [
+      { heading: "目的地", keys: keys.filter((k) => !k.startsWith("animal:")) },
+      { heading: "台灣動物", keys: keys.filter((k) => k.startsWith("animal:")) }
+    ];
     this.collectionGridEl.replaceChildren();
-    for (const key of keys) {
-      const card = cards[key];
-      const tile = document.createElement("button");
-      tile.type = "button";
-      tile.className = "collection-tile";
-      const title = document.createElement("span");
-      title.className = "collection-tile-title";
-      const hint = document.createElement("span");
-      hint.className = "collection-tile-hint";
-      if (collected.has(key)) {
-        title.textContent = card.title;
-        // 地標卡的卡名就是地名，不重複寫
-        const label = destLabel(key, card);
-        hint.textContent = label === card.title ? "地標" : label;
-        tile.addEventListener("click", () => this._showCollectionDetail(key));
-      } else {
-        tile.classList.add("locked");
-        tile.disabled = true;
-        title.textContent = "？？？";
-        const name = document.createElement("span");
-        name.className = "nowrap";
-        name.textContent = `「${destLabel(key, card)}」`;
-        hint.append("把乘客送到", name, "解鎖");
-      }
-      tile.append(title, hint);
-      this.collectionGridEl.append(tile);
+    for (const section of sections) {
+      if (!section.keys.length) continue;
+      const got = section.keys.filter((k) => collected.has(k)).length;
+      const h = document.createElement("h3");
+      h.className = "collection-section-heading";
+      h.textContent = `${section.heading} ${got} / ${section.keys.length}`;
+      const grid = document.createElement("div");
+      grid.className = "collection-section-grid";
+      for (const key of section.keys) grid.append(this._collectionTile(key, cards[key], collected.has(key)));
+      this.collectionGridEl.append(h, grid);
     }
 
     this.collectionClearBtn.disabled = collected.size === 0;
@@ -488,9 +481,56 @@ export class GameUI {
     this.collectionDetailEl.classList.add("hidden");
   }
 
+  _collectionTile(key, card, isCollected) {
+    const isAnimal = key.startsWith("animal:");
+    const tile = document.createElement("button");
+    tile.type = "button";
+    tile.className = "collection-tile";
+    const title = document.createElement("span");
+    title.className = "collection-tile-title";
+    const hint = document.createElement("span");
+    hint.className = "collection-tile-hint";
+
+    if (isCollected) {
+      title.textContent = card.title;
+      if (isAnimal) {
+        tile.classList.add("has-image");
+        const img = document.createElement("img");
+        img.className = "collection-tile-image";
+        img.alt = "";
+        setCardImage(img, card);
+        tile.prepend(img);
+      } else {
+        // 地標卡的卡名就是地名，不重複寫
+        const label = destLabel(key, card);
+        hint.textContent = label === card.title ? "地標" : label;
+      }
+      tile.addEventListener("click", () => this._showCollectionDetail(key));
+    } else {
+      tile.classList.add("locked");
+      tile.disabled = true;
+      title.textContent = "？？？";
+      if (isAnimal) {
+        hint.textContent = "在岸邊的樹上尋寶發現";
+      } else {
+        const name = document.createElement("span");
+        name.className = "nowrap";
+        name.textContent = `「${destLabel(key, card)}」`;
+        hint.append("把乘客送到", name, "解鎖");
+      }
+    }
+    const text = document.createElement("span");
+    text.className = "collection-tile-text";
+    text.append(title);
+    if (hint.textContent) text.append(hint);
+    tile.append(text);
+    return tile;
+  }
+
   _showCollectionDetail(key) {
     const { cards, license } = this.collection;
     const card = cards[key];
+    setCardImage(document.getElementById("collection-detail-image"), card);
     document.getElementById("collection-detail-title").textContent = card.title;
     document.getElementById("collection-detail-body").textContent = card.body;
     this._renderSources(document.getElementById("collection-detail-sources"), card, license);
@@ -520,6 +560,61 @@ export class GameUI {
     this.collectionClearArmed = false;
     this.collectionClearBtn.textContent = "清空收藏";
     this.collectionClearBtn.classList.remove("armed");
+  }
+
+  // 岸邊樹上冒出的「！」：跟著樹的位置移動，點了交給 onTreasureClick
+  updateTreasureMarks(camera, visible) {
+    if (!this.treasureDomMap) this.treasureDomMap = new Map();
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const proj = new THREE.Vector3();
+    const alive = new Set();
+    for (const t of visible) {
+      alive.add(t.id);
+      let el = this.treasureDomMap.get(t.id);
+      if (!el) {
+        el = document.createElement("button");
+        el.type = "button";
+        el.className = "treasure-mark";
+        el.textContent = "！";
+        el.setAttribute("aria-label", "樹上好像有動物，點一下看看");
+        el.addEventListener("click", () => this.onTreasureClick?.(t.id));
+        this.treasureLayer.appendChild(el);
+        this.treasureDomMap.set(t.id, el);
+      }
+      proj.set(t.tree.x, t.tree.y + 6.2, t.tree.z).project(camera);
+      const offscreen = proj.z >= 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05;
+      el.classList.toggle("hidden", offscreen);
+      if (!offscreen) {
+        // 手機畫面窄，樹常落在上方面板或下方搖桿底下，點不到；把「！」夾回能點的範圍
+        const safe = visible.length ? (this._treasureSafe ??= this._treasureSafeArea()) : null;
+        const x = Math.min(Math.max(((proj.x + 1) / 2) * w, safe.left), safe.right);
+        const y = Math.min(Math.max(((1 - proj.y) / 2) * h, safe.top), safe.bottom);
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      }
+    }
+    this._treasureSafe = null;
+    for (const [id, el] of this.treasureDomMap) {
+      if (!alive.has(id)) {
+        el.remove();
+        this.treasureDomMap.delete(id);
+      }
+    }
+  }
+
+  // 「！」可以放的範圍。標記是以底部中心對齊（translate -50%, -100%），高約 34px
+  _treasureSafeArea() {
+    const bottomOf = (sel) => document.querySelector(sel)?.getBoundingClientRect().bottom ?? 0;
+    const topOf = (sel) => document.querySelector(sel)?.getBoundingClientRect().top ?? window.innerHeight;
+    const hudBottom = Math.max(bottomOf(".status-panel"), bottomOf(".right-column"));
+    const controlsTop = Math.min(topOf(".joystick-zone"), topOf(".action-buttons"));
+    return {
+      left: 30,
+      right: window.innerWidth - 30,
+      top: hudBottom + 52,
+      bottom: Math.max(hudBottom + 52, controlsTop - 14)
+    };
   }
 
   // 小地圖：以玩家為中心顯示附近約 4 x 4 個街廓，並標出行政區名
@@ -630,6 +725,19 @@ export class GameUI {
       [...acc].map(([name, [sx, sz, n]]) => [name, [sx / n, sz / n]])
     );
   }
+}
+
+// 動物卡的圖；圖檔不在時整個藏起來，不留破圖
+function setCardImage(img, card) {
+  if (!card.image) {
+    img.classList.add("hidden");
+    img.removeAttribute("src");
+    return;
+  }
+  img.classList.remove("hidden");
+  img.alt = img.classList.contains("collection-tile-image") ? "" : card.title;
+  img.onerror = () => img.classList.add("hidden");
+  img.src = card.image;
 }
 
 // 收藏冊上顯示的目的地名稱，與乘客頭上的字一致（同 passengers.js 的 label）

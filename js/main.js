@@ -8,7 +8,8 @@ import { GameUI } from "./ui.js";
 import { PedestrianManager } from "./pedestrians.js";
 import { updateSeeThrough } from "./seeThrough.js";
 import { PassengerManager } from "./passengers.js";
-import { KNOWLEDGE_CARDS, KNOWLEDGE_LICENSE } from "./knowledgeCards.js";
+import { KNOWLEDGE_CARDS, KNOWLEDGE_LICENSE, ANIMAL_KEYS } from "./knowledgeCards.js";
+import { TreasureManager } from "./treasures.js";
 import { loadCollected, saveCollected, clearCollected } from "./cardCollection.js";
 
 // ===== 1. 建立 Three.js 場景、紀念碑谷低視角攝影機與渲染器 =====
@@ -94,6 +95,24 @@ scene.add(playerBoat.group);
 // 岸邊等船的乘客與船上乘客
 const passengers = new PassengerManager(scene, city.blocks, city.blockTop);
 const collectedCards = loadCollected(Object.keys(KNOWLEDGE_CARDS));
+const treasures = new TreasureManager(city.streetTrees, ANIMAL_KEYS, (k) => collectedCards.has(k));
+
+// 收下一張知識卡並跳出來給玩家看
+function collectCard(key) {
+  const card = KNOWLEDGE_CARDS[key];
+  if (!card) return;
+  const isNew = !collectedCards.has(key);
+  collectedCards.add(key);
+  if (isNew) {
+    saveCollected(collectedCards);
+    ui.updateCollectionCount();
+  }
+  ui.showKnowledgeCard(card, {
+    collected: collectedCards.size,
+    total: Object.keys(KNOWLEDGE_CARDS).length,
+    isNew
+  }, KNOWLEDGE_LICENSE);
+}
 passengers.attachToBoat(playerBoat, BOAT_TIERS[0]);
 
 // 玩家登船後站在對方甲板上的分身小人
@@ -304,6 +323,13 @@ const ui = new GameUI({
 });
 ui.updateStats(state);
 ui.setBlocks(city.blocks);
+ui.onTreasureClick = (id) => {
+  const found = treasures.claim(id);
+  if (!found) return;
+  spawnCelebration(new THREE.Vector3(found.tree.x, found.tree.y + 4, found.tree.z), 0x8fd16a, 16);
+  ui.showToast(`在樹上發現了${KNOWLEDGE_CARDS[found.key].title}！`);
+  collectCard(found.key);
+};
 ui.initCollection({
   cards: KNOWLEDGE_CARDS,
   license: KNOWLEDGE_LICENSE,
@@ -523,20 +549,7 @@ function animate() {
       ui.showToast(`送達${ev.passenger.dest.label}！+${ev.points} 分`);
       ui.showPlayerBubble("到囉～路上小心！");
       addScore(ev.points);
-      const card = KNOWLEDGE_CARDS[ev.passenger.dest.key];
-      if (card) {
-        const isNew = !collectedCards.has(ev.passenger.dest.key);
-        collectedCards.add(ev.passenger.dest.key);
-        if (isNew) {
-          saveCollected(collectedCards);
-          ui.updateCollectionCount();
-        }
-        ui.showKnowledgeCard(card, {
-          collected: collectedCards.size,
-          total: Object.keys(KNOWLEDGE_CARDS).length,
-          isNew
-        }, KNOWLEDGE_LICENSE);
-      }
+      collectCard(ev.passenger.dest.key);
     } else if (ev.type === "needBigger") {
       ui.showToast("有人想搭船！升級成帆船或海盜船才能載客喔", { soft: true });
     } else if (ev.type === "full") {
@@ -575,6 +588,7 @@ function animate() {
   const onboardGroups = passengers.onboardSummary();
   ui.updatePassengerStatus(onboardGroups, passengers.onboard.length, passengers.capacity);
   ui.updatePassengerLabels(camera, state.pos, passengers.waiting, passengers.capacity > 0);
+  ui.updateTreasureMarks(camera, treasures.update(state.pos));
   ui.drawMinimap(state.pos, npcManager.npcs, TIME_PRESETS[state.timeKey].isNight, {
     waiting: passengers.waiting,
     destBlocks: onboardGroups.flatMap((g) => g.dest.blocks)
@@ -593,5 +607,5 @@ animate();
 
 // 測試用：網址加上 ?debug 才會開放，讓自動化測試能直接移動船與加分
 if (new URLSearchParams(location.search).has("debug")) {
-  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat, getZoom: () => zoomFactor };
+  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat, getZoom: () => zoomFactor, treasures };
 }

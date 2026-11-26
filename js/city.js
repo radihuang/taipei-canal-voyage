@@ -398,6 +398,7 @@ export function buildTaipeiCity(scene) {
   const blockSize = WORLD_CONFIG.blockHalfSize * 2; // 34
   const blocks = [];
   let streetTreeCount = 0;
+  const streetTrees = []; // 沿岸行道樹的世界座標，給尋寶用
 
   const centers = WORLD_CONFIG.blockCenters;
   centers.forEach((bz, iz) => {
@@ -462,6 +463,7 @@ export function buildTaipeiCity(scene) {
           const tx = along === "x" ? t : fixed;
           const tz = along === "x" ? fixed : t;
           block.add(createTreeSpecies(species, tx, BLOCK_TOP, tz, 0.95 + rand() * 0.25, rand() * 6));
+          streetTrees.push({ x: bx + tx, y: BLOCK_TOP, z: bz + tz });
           k++;
           streetTreeCount++;
         }
@@ -626,6 +628,7 @@ export function buildTaipeiCity(scene) {
     updateWater,
     blocks,
     blockTop: BLOCK_TOP,
-    streetTreeCount
+    streetTreeCount,
+    streetTrees
   };
 }

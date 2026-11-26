@@ -91,4 +91,131 @@ export const KNOWLEDGE_CARDS = {
   }
 };
 
+// ===== 台灣動物卡（岸邊樹上尋寶發現）=====
+// 同樣先在 Taiwan.md 找到，再回國家公園、海洋保育署、農業部、臺灣生命大百科、科博館的原始資料逐句核對。
+// Taiwan.md 這幾篇多數標示「待查證」，所以數字只用原始資料寫得到的：
+// 石虎數量各來源不一（科博館「可能不到 1000 隻」、Taiwan.md「不到 500 隻」），卡上不寫；
+// 黑熊、白海豚、櫻花鉤吻鮭的族群數字隨調查年份變動，也不寫。
+// 長鬃山羊、藍腹鷴、莫氏樹蛙、臺北樹蛙在 Taiwan.md 只出現在〈特有種〉的物種列表，內容全部來自原始資料。
+// 圖片由專案作者提供（assets/animals/）。2026-11-26 核對。
+const NPS = (id) => `https://www.taiwan.nps.gov.tw/home/zh-tw/eco-gallery/${id}.html`;
+const TAIEOL = (id) => `https://taieol.tw/pages/${id}`;
+const ANIMAL = (file) => `assets/animals/${file}.webp`;
+
+Object.assign(KNOWLEDGE_CARDS, {
+  "animal:blueMagpie": {
+    title: "臺灣藍鵲",
+    image: ANIMAL("blueMagpie"),
+    body: "臺灣特有種。全身蔚藍，頭、頸和胸部是黑色，嘴和腳是紅色，尾羽越往中間越長，常成群出現，所以又叫「長尾陣」。牠們合作育雛：部分孩子會留下來當幫手，幫忙驅離入侵者、送食物給孵蛋的雌鳥。除了中低海拔的森林，公園這類樹多的地方也看得到牠們。",
+    sources: [
+      { label: "Taiwan.md〈台灣藍鵲〉", url: TWMD("nature/台灣藍鵲") },
+      { label: "臺灣國家公園：臺灣藍鵲", url: NPS(21493) }
+    ]
+  },
+  "animal:macaque": {
+    title: "臺灣獼猴",
+    image: ANIMAL("macaque"),
+    body: "臺灣特有種，也是臺灣島上除了人類以外唯一的靈長類，主要住在海拔 3,000 公尺以下的森林，吃果實和嫩葉。牠們群居，一群以十幾到三十隻最常見，白天活動，清晨和黃昏是覓食高峰。遇到危險時會發出短促的「喀！喀！」聲，或搖動樹枝警告同伴。",
+    sources: [
+      { label: "Taiwan.md〈台灣獼猴〉", url: TWMD("nature/台灣獼猴") },
+      { label: "臺灣國家公園：人猴距離拿捏好，臺灣獼猴有生機", url: "https://www.taiwan.nps.gov.tw/home/zh-tw/topic/18525.html" },
+      { label: "臺灣生命大百科：臺灣獼猴", url: TAIEOL(73696) }
+    ]
+  },
+  "animal:serow": {
+    title: "臺灣長鬃山羊",
+    image: ANIMAL("serow"),
+    body: "臺灣特有種，也是臺灣唯一的野生牛科動物。牠擅長在陡坡活動，靠外突的蹄抓住岩石表面，棲息在海拔 200 到 3,800 公尺之間的山區森林，也常出現在岩石裸露的崩塌地和險峻陡峭的山區。警戒心很強，生氣、警戒或受傷時會發出低沉宏亮的叫聲。",
+    sources: [
+      { label: "Taiwan.md〈特有種〉", url: TWMD("nature/特有種") },
+      { label: "臺灣國家公園：臺灣長鬃山羊", url: NPS(21343) }
+    ]
+  },
+  "animal:swinhoePheasant": {
+    title: "藍腹鷴",
+    image: ANIMAL("swinhoePheasant"),
+    body: "臺灣特有種。雄鳥臉上裸露的皮膚和肉冠是耀眼的血紅色，頭頂有白色羽冠，後頸、上背和中央一對特長的尾羽是潔白色，腹面黑色帶鐵青色光澤。牠住在海拔約 300 到 2,300 公尺的闊葉林底層，學名 swinhoii 是紀念英國外交官 Robert Swinhoe。",
+    sources: [
+      { label: "Taiwan.md〈特有種〉", url: TWMD("nature/特有種") },
+      { label: "臺灣生命大百科：藍腹鷴", url: TAIEOL(73078) }
+    ]
+  },
+  "animal:mikadoPheasant": {
+    title: "帝雉",
+    image: ANIMAL("mikadoPheasant"),
+    body: "臺灣特有種，新臺幣 1,000 元鈔票背面的兩隻鳥就是牠。牠住在海拔 1,800 到 3,800 公尺常有雲霧的高山，生性害羞機警，被稱為「迷霧中的王者」。1906 年，英國探險家古費洛在鄒族的頭飾上看到兩根黑白相間的長尾羽，帶回英國鑑定，學名因此用了日文「天皇」的 mikado。",
+    sources: [
+      { label: "Taiwan.md〈帝雉〉", url: TWMD("nature/帝雉") },
+      { label: "農業部：迷霧中的王者─帝雉", url: "https://www.moa.gov.tw/ws.php?id=2501252" }
+    ]
+  },
+  "animal:moltrechtFrog": {
+    title: "莫氏樹蛙",
+    image: ANIMAL("moltrechtFrog"),
+    body: "臺灣特有種。背面墨綠色，眼睛的虹膜和大腿內側是橘紅色，身體側面和四肢內側有許多小黑斑，指尖有吸盤。從低海拔的樹林、果園到兩千多公尺的山區都找得到，是臺灣分布最廣的樹蛙。北部多在春夏繁殖，花蓮則在冬天。",
+    sources: [
+      { label: "Taiwan.md〈特有種〉", url: TWMD("nature/特有種") },
+      { label: "太魯閣國家公園：不同海拔莫氏樹蛙族群生活史之比較（2010）", url: "https://ws.moi.gov.tw/Download.ashx?u=LzAwMS9VcGxvYWQvT2xkRmlsZV9UQVJPS08vV2ViRmlsZXMvRWNvbG9naWNhbFJlc2VhcmNoRmlsZXMvNDA5NC9maWxlMTM1MDY2NzM5MjM4MDQucGRm&n=ZmlsZTEzNTA2NjczOTIzODA0LnBkZg%3D%3D" }
+    ]
+  },
+  "animal:taipeiFrog": {
+    title: "臺北樹蛙",
+    image: ANIMAL("taipeiFrog"),
+    body: "臺灣特有種，體長 4 到 6 公分，背面綠色、腹面白中帶黃，虹膜是黃色。牠特別的地方是在秋末和冬天繁殖：平地大約十二月到隔年二月，山區從十月到隔年三月。陽明山連續五年的調查發現，牠們可以活到 5 歲，而且每年都回到同一個地方繁殖。",
+    sources: [
+      { label: "Taiwan.md〈特有種〉", url: TWMD("nature/特有種") },
+      { label: "臺灣生命大百科：臺北樹蛙", url: TAIEOL(225726) }
+    ]
+  },
+  "animal:blackBear": {
+    title: "臺灣黑熊",
+    image: ANIMAL("blackBear"),
+    body: "亞洲黑熊的七個亞種之一，也是臺灣唯一原產的熊。最大的特徵是胸前黃白色的 V 字形或新月形斑紋，所以又叫「月熊」。成熊約 60 到 150 公斤，主要住在中央山脈海拔 1,000 到 2,500 公尺的森林。玉山國家公園的無線電追蹤研究發現，臺灣黑熊沒有冬眠，一年到頭都在活動。",
+    sources: [
+      { label: "Taiwan.md〈台灣黑熊〉", url: TWMD("nature/台灣黑熊") },
+      { label: "玉山國家公園：臺灣黑熊科普", url: "https://www.ysnp.gov.tw/StaticPage/Science" }
+    ]
+  },
+  "animal:whiteDolphin": {
+    title: "臺灣白海豚",
+    image: ANIMAL("whiteDolphin"),
+    body: "俗稱中華白海豚，喜歡近岸水深 25 公尺以內的淺海和河口。剛出生時全身灰色，長大後身上出現斑點，成年後轉成白色或粉紅色。2015 年學者把臺灣海峽這一群描述為新亞種 Sousa chinensis taiwanensis。2020 年 9 月 1 日起，苗栗到雲林外海 763 平方公里劃為牠們的重要棲息環境。",
+    sources: [
+      { label: "Taiwan.md〈台灣白海豚〉", url: TWMD("nature/台灣白海豚") },
+      { label: "海洋保育署：臺灣海域白海豚保育專區", url: "https://www.oca.gov.tw/ch/home.jsp?id=368&parentpath=0,296,360" },
+      { label: "Zoological Studies（2015）新亞種描述", url: "https://zoolstud.sinica.edu.tw/Journals/54/54-36.html" }
+    ]
+  },
+  "animal:salmon": {
+    title: "櫻花鉤吻鮭",
+    image: ANIMAL("salmon"),
+    body: "冰河時期留下來的陸封型太平洋鮭魚，被稱為「國寶魚」。臺灣是北半球鮭魚分布的南界，櫻花鉤吻鮭現在主要只剩雪霸國家公園武陵地區的七家灣溪和它的上游。雪霸國家公園管理處在武陵遊憩區設有櫻花鉤吻鮭生態中心。",
+    sources: [
+      { label: "Taiwan.md〈櫻花鉤吻鮭〉", url: TWMD("nature/櫻花鉤吻鮭") },
+      { label: "臺灣國家公園：櫻花鉤吻鮭生態中心", url: "https://www.taiwan.nps.gov.tw/home/zh-tw/topic/18290.html" },
+      { label: "農業部水產試驗所：愈來愈多櫻花鉤吻鮭戲游七家灣溪", url: "https://www.tfrin.gov.tw/theme_data.php?theme=news&sub_theme=feed&id=35276" }
+    ]
+  },
+  "animal:pangolin": {
+    title: "臺灣穿山甲",
+    image: ANIMAL("pangolin"),
+    body: "臺灣特有亞種，全身披著硬鱗片。牠用強壯的前爪挖洞找食物，主食是白蟻和螞蟻，用又長又黏的舌頭把蟻黏進嘴裡。白天待在洞穴裡，晚上才出來覓食，還會爬樹和游泳。遇到危險時會把頭往肚子捲成一顆球，讓背上的硬鱗朝外。",
+    sources: [
+      { label: "Taiwan.md〈台灣穿山甲〉", url: TWMD("nature/台灣穿山甲") },
+      { label: "臺灣生命大百科：臺灣穿山甲", url: TAIEOL(75630) }
+    ]
+  },
+  "animal:leopardCat": {
+    title: "石虎",
+    image: ANIMAL("leopardCat"),
+    body: "臺灣現在唯一的原生貓科動物，另一種原生的臺灣雲豹已證實滅絕。石虎和家貓很像，分辨方法是：額頭有兩條白色縱紋、眼眶有白圈、耳朵背後有白斑，身上是深色斑點而不是條紋。成年石虎的叫聲是低沉的嘶喝聲，不會喵喵叫。",
+    sources: [
+      { label: "Taiwan.md〈台灣石虎保育〉", url: TWMD("nature/台灣石虎保育") },
+      { label: "國立自然科學博物館：認識石虎", url: "https://web3.nmns.edu.tw/exhibits/107/leopardcat/cont1.html" }
+    ]
+  }
+});
+
+export const ANIMAL_KEYS = Object.keys(KNOWLEDGE_CARDS).filter((k) => k.startsWith("animal:"));
+
 export const KNOWLEDGE_LICENSE = { label: "CC BY-SA 4.0", url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hant" };
