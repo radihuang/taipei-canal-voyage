@@ -29,6 +29,10 @@ export class GameUI {
     this.minimapCanvas = document.getElementById("minimap");
     this.minimapCtx = this.minimapCanvas.getContext("2d");
 
+    this.passengerCountEl = document.getElementById("passenger-count");
+    this.passengerDestsEl = document.getElementById("passenger-dests");
+    this.passengerDomMap = new Map();
+
     this.npcDomMap = new Map();
     this.playerBubbleEl = this._createBubbleEl();
     this.playerBubbleTimer = 0;
@@ -292,8 +296,67 @@ export class GameUI {
     }
   }
 
+  // 載客狀態：船上人數與各目的地
+  updatePassengerStatus(groups, count, capacity) {
+    const countText = capacity === 0
+      ? "🙋 升級帆船即可載客"
+      : `🙋 乘客 ${count} / ${capacity}`;
+    const destText = groups.map((g) => `→ ${g.dest.label}${g.count > 1 ? ` ×${g.count}` : ""}`).join("　");
+    if (countText !== this._lastPCount) {
+      this._lastPCount = countText;
+      this.passengerCountEl.textContent = countText;
+    }
+    if (destText !== this._lastPDests) {
+      this._lastPDests = destText;
+      this.passengerDestsEl.textContent = destText;
+    }
+  }
+
+  // 岸邊等船的乘客頭上顯示目的地
+  updatePassengerLabels(camera, playerPos, waiting, canCarry) {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const proj = new THREE.Vector3();
+    const alive = new Set();
+
+    for (const p of waiting) {
+      alive.add(p.id);
+      let el = this.passengerDomMap.get(p.id);
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "npc-tag passenger-tag hidden";
+        this.bubblesLayer.appendChild(el);
+        this.passengerDomMap.set(p.id, el);
+      }
+
+      const pos = p.model.position;
+      const dist = Math.hypot(pos.x - playerPos.x, pos.z - playerPos.z);
+      proj.set(pos.x, pos.y + 1.9, pos.z).project(camera);
+      const offscreen = proj.z >= 1 || Math.abs(proj.x) > 1.05 || Math.abs(proj.y) > 1.05;
+      if (dist > 70 || offscreen) {
+        el.classList.add("hidden");
+        continue;
+      }
+
+      const text = `想去${p.dest.label}`;
+      if (el.textContent !== text) el.textContent = text;
+      el.classList.toggle("locked", !canCarry);
+      el.style.left = `${(proj.x * 0.5 + 0.5) * w}px`;
+      el.style.top = `${(-proj.y * 0.5 + 0.5) * h}px`;
+      el.classList.remove("hidden");
+    }
+
+    // 已上船或消失的乘客，移除標籤
+    for (const [id, el] of this.passengerDomMap) {
+      if (!alive.has(id)) {
+        el.remove();
+        this.passengerDomMap.delete(id);
+      }
+    }
+  }
+
   // 小地圖：以玩家為中心顯示附近約 4 x 4 個街廓，並標出行政區名
-  drawMinimap(playerPos, npcs, isNight) {
+  drawMinimap(playerPos, npcs, isNight, { waiting = [], destBlocks = [] } = {}) {
     const ctx = this.minimapCtx;
     const size = this.minimapCanvas.width;
     const view = 210; // 小地圖涵蓋的世界寬度
@@ -324,6 +387,16 @@ export class GameUI {
       ctx.fillRect(toX(b.x) - bSize / 2, toY(b.z) - bSize / 2, bSize, bSize);
     }
 
+    // 船上乘客的目的地：橘色外框
+    if (destBlocks.length) {
+      ctx.lineWidth = 2.5 * k;
+      ctx.strokeStyle = "#f26b3a";
+      for (const b of destBlocks) {
+        if (Math.abs(b.x - cx) > half + 20 || Math.abs(b.z - cz) > half + 20) continue;
+        ctx.strokeRect(toX(b.x) - bSize / 2, toY(b.z) - bSize / 2, bSize, bSize);
+      }
+    }
+
     // 101 標記
     if (Math.abs(100 - cx) < half && Math.abs(50 - cz) < half) {
       ctx.fillStyle = isNight ? "#fff" : "#3f5a6b";
@@ -342,6 +415,14 @@ export class GameUI {
       if (Math.abs(dx - cx) > half || Math.abs(dz - cz) > half) continue;
       ctx.strokeText(name, toX(dx), toY(dz) + 4 * k);
       ctx.fillText(name, toX(dx), toY(dz) + 4 * k);
+    }
+
+    // 岸邊等船的乘客：小橘方塊
+    ctx.fillStyle = "#f5a65b";
+    for (const p of waiting) {
+      const pos = p.model.position;
+      if (Math.abs(pos.x - cx) > half || Math.abs(pos.z - cz) > half) continue;
+      ctx.fillRect(toX(pos.x) - 2.5 * k, toY(pos.z) - 2.5 * k, 5 * k, 5 * k);
     }
 
     // NPC 點

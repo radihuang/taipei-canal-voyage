@@ -76,6 +76,8 @@ export function createBoatMesh(tier, { isPlayer = false, accentColor = null } = 
 
   // 乘客站位槽（供玩家登船搭便車使用）
   const passengerSlot = new THREE.Vector3(0, 0.6, 0.2);
+  // 載客站位（玩家自己的船載乘客用），依船型在下面填入
+  const cargoSlots = [];
 
   if (tier === 0) {
     // ===== 1. 單人立槳 SUP =====
@@ -258,6 +260,9 @@ export function createBoatMesh(tier, { isPlayer = false, accentColor = null } = 
     lanternLights.push(lanternMat);
 
     passengerSlot.set(0.35, 0.68, 0.75);
+    // 前排長凳與船頭甲板，共 4 位（船尾留給船長）
+    [[-0.42, 0.81, 0.9], [0.42, 0.81, 0.9], [-0.5, 0.68, 1.8], [0.5, 0.68, 1.8]]
+      .forEach(([x, y, z]) => cargoSlots.push(new THREE.Vector3(x, y, z)));
   } else {
     // ===== 3. 十人海盜船 =====
     // 寬敞的橘木大船身
@@ -424,6 +429,11 @@ export function createBoatMesh(tier, { isPlayer = false, accentColor = null } = 
     });
 
     passengerSlot.set(-0.75, 1.14, 2.35);
+    // 主甲板 9 位，避開兩根桅杆（z 1.25、-0.95）與兩位船員
+    [
+      [0.85, -0.5], [-0.85, -0.5], [0, 0.15], [0.85, 0.5], [-0.85, 1.3],
+      [0.85, 1.4], [-0.85, 2.2], [0, 2.4], [0.45, 2.85]
+    ].forEach(([x, z]) => cargoSlots.push(new THREE.Vector3(x, 1.15, z)));
   }
 
   // 柔和尾波水環
@@ -445,6 +455,7 @@ export function createBoatMesh(tier, { isPlayer = false, accentColor = null } = 
     animatedParts,
     lanternLights,
     wakeRing,
-    passengerSlot
+    passengerSlot,
+    cargoSlots
   };
 }

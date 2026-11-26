@@ -303,6 +303,40 @@ body.theme-night .boat-pill {
   opacity: 0.8;
 }
 
+/* 載客狀態列 */
+.passenger-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 8px 0 2px;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.passenger-count {
+  font-weight: 700;
+}
+
+.passenger-dests {
+  font-size: 10.5px;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+.passenger-dests:empty {
+  display: none;
+}
+
+/* 岸邊等船乘客頭上的目的地 */
+.npc-tag.passenger-tag {
+  background: rgba(255, 246, 228, 0.92);
+  border: 1px solid rgba(242, 107, 58, 0.35);
+}
+
+.npc-tag.passenger-tag.locked {
+  opacity: 0.7;
+}
+
 /* Banners & Toast */
 #toast-container {
   position: fixed;

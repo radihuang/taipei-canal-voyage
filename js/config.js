@@ -77,6 +77,20 @@ export const DISTRICTS = {
   文山: { heights: [5, 11], palette: [0xf4ece1, 0x99b8a9, 0xe9d8c5, 0xeac2bd], plaza: 0xdde8d8, park: 0.45, map: "#c6dcc4" }
 };
 
+// 特殊地標所在街廓（"ix,iz"）
+export const LANDMARKS = {
+  "5,4": { key: "taipei101", name: "台北 101" },
+  "1,4": { key: "memorial", name: "中正紀念堂" },
+  "3,4": { key: "daanPark", name: "大安森林公園" }
+};
+
+// 載客：每種船能載幾位乘客（船長自己佔一個位置，所以是容量減一）
+export const PASSENGER_CONFIG = {
+  waitingCount: 14, // 地圖上同時有幾位在岸邊等船
+  pickupRange: 6.5, // 船靠多近會接到人
+  dropRange: 27 // 距離目的地街廓中心多近算送達（街廓半寬 17 + 運河 10）
+};
+
 // 取得某世界座標所在（或最近）的街廓索引
 export function blockIndexAt(x, z) {
   const c = WORLD_CONFIG.blockCenters;

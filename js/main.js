@@ -7,6 +7,7 @@ import { InputController } from "./controls.js";
 import { GameUI } from "./ui.js";
 import { PedestrianManager } from "./pedestrians.js";
 import { updateSeeThrough } from "./seeThrough.js";
+import { PassengerManager } from "./passengers.js";
 
 // ===== 1. 建立 Three.js 場景、紀念碑谷低視角攝影機與渲染器 =====
 const container = document.getElementById("canvas-container");
@@ -88,6 +89,10 @@ let playerBoat = createBoatMesh(0, { isPlayer: true });
 playerBoat.group.position.copy(state.pos);
 scene.add(playerBoat.group);
 
+// 岸邊等船的乘客與船上乘客
+const passengers = new PassengerManager(scene, city.blocks, city.blockTop);
+passengers.attachToBoat(playerBoat, BOAT_TIERS[0]);
+
 // 玩家登船後站在對方甲板上的分身小人
 const passengerAvatar = createMinimalCharacter({
   cloakColor: 0xfdf5e6,
@@ -150,6 +155,11 @@ function switchPlayerBoat(newTier, { announce = false } = {}) {
     return;
   }
 
+  if (!passengers.canFit(BOAT_TIERS[newTier])) {
+    ui.showToast(`船上有 ${passengers.onboard.length} 位乘客，「${BOAT_TIERS[newTier].name}」坐不下，先送他們到目的地吧！`, { soft: true });
+    return;
+  }
+
   state.currentTier = newTier;
   scene.remove(playerBoat.group);
   playerBoat = createBoatMesh(newTier, { isPlayer: true });
@@ -157,6 +167,7 @@ function switchPlayerBoat(newTier, { announce = false } = {}) {
   playerBoat.group.rotation.y = state.yaw;
   playerBoat.group.visible = !state.boardedNpc;
   scene.add(playerBoat.group);
+  passengers.attachToBoat(playerBoat, BOAT_TIERS[newTier]);
 
   spawnCelebration(state.pos, 0xf26b3a, 18);
   if (announce) {
@@ -247,6 +258,10 @@ function handleBoardToggle() {
 
   // 否則嘗試登上附近船友的帆船或海盜船
   if (!currentNearestNpc) return;
+  if (passengers.onboard.length > 0) {
+    ui.showToast("船上還有乘客，先送他們到目的地再去搭便車吧！", { soft: true });
+    return;
+  }
   if (!currentNearestNpc.tierInfo.canBeBoarded) {
     ui.showToast("這艘單人 SUP 站不下兩個人喔，找帆船或海盜船搭便車吧！", { soft: true });
     return;
@@ -488,6 +503,24 @@ function animate() {
     playerBoat.wakeRing.material.opacity = 0.2 + speedRatio * 0.35;
   }
 
+  // 載客：接人與送達
+  const pEvents = passengers.update(dt, elapsed, state.pos, { canInteract: !state.boardedNpc });
+  for (const ev of pEvents) {
+    if (ev.type === "pickup") {
+      ui.showToast(`接到一位乘客，想去「${ev.passenger.dest.label}」`, { soft: true });
+      ui.showPlayerBubble(`歡迎上船！我們去${ev.passenger.dest.label} ⛵`);
+    } else if (ev.type === "deliver") {
+      spawnCelebration(state.pos, 0x56c5d0, 14);
+      ui.showToast(`送達${ev.passenger.dest.label}！+${ev.points} 分`);
+      ui.showPlayerBubble("到囉～路上小心！");
+      addScore(ev.points);
+    } else if (ev.type === "needBigger") {
+      ui.showToast("有人想搭船！升級成帆船或海盜船才能載客喔", { soft: true });
+    } else if (ev.type === "full") {
+      ui.showToast("船上客滿了，先送一些乘客到目的地吧", { soft: true });
+    }
+  }
+
   // 尋找最近船友（供下一幀互動與光環提示）
   currentNearestNpc = npcManager.findNearest(state.pos, 12.5);
 
@@ -516,7 +549,13 @@ function animate() {
     state.district = district;
   }
   ui.updateFloatingLabels(dt, camera, state.pos, npcManager.npcs, currentNearestNpc);
-  ui.drawMinimap(state.pos, npcManager.npcs, TIME_PRESETS[state.timeKey].isNight);
+  const onboardGroups = passengers.onboardSummary();
+  ui.updatePassengerStatus(onboardGroups, passengers.onboard.length, passengers.capacity);
+  ui.updatePassengerLabels(camera, state.pos, passengers.waiting, passengers.capacity > 0);
+  ui.drawMinimap(state.pos, npcManager.npcs, TIME_PRESETS[state.timeKey].isNight, {
+    waiting: passengers.waiting,
+    destBlocks: onboardGroups.flatMap((g) => g.dest.blocks)
+  });
 
   renderer.render(scene, camera);
 }
@@ -528,3 +567,8 @@ window.addEventListener("resize", () => {
 });
 
 animate();
+
+// 測試用：網址加上 ?debug 才會開放，讓自動化測試能直接移動船與加分
+if (new URLSearchParams(location.search).has("debug")) {
+  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat };
+}

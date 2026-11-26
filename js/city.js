@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { WORLD_CONFIG, DISTRICT_GRID, DISTRICTS } from "./config.js";
+import { WORLD_CONFIG, DISTRICT_GRID, DISTRICTS, LANDMARKS } from "./config.js";
 import { makeMat, createTreeSpecies, SPECIES_KEYS } from "./trees.js";
 import { bakeStatic } from "./bake.js";
 import { applySeeThrough } from "./seeThrough.js";
@@ -323,12 +323,6 @@ function seededRandom(seed) {
 const BLOCK_TOP = 1.35; // 街廓廣場地面高度
 export const WALK_RADIUS = 13.2; // 行人沿街廓外圈散步的半徑
 
-// 特殊地標所在街廓（ix, iz）
-const LANDMARKS = {
-  "5,4": "taipei101",
-  "1,4": "memorial",
-  "3,4": "daanPark"
-};
 
 // 建立完整台北運河城市與動態水面
 export function buildTaipeiCity(scene) {
@@ -410,7 +404,7 @@ export function buildTaipeiCity(scene) {
     centers.forEach((bx, ix) => {
       const districtName = DISTRICT_GRID[iz][ix];
       const district = DISTRICTS[districtName];
-      const landmark = LANDMARKS[`${ix},${iz}`] || null;
+      const landmark = LANDMARKS[`${ix},${iz}`]?.key || null;
       const isPark = landmark === "daanPark" || (!landmark && rand() < district.park);
 
       const block = new THREE.Group();
@@ -581,7 +575,7 @@ export function buildTaipeiCity(scene) {
       block.updateMatrixWorld(true);
       cityGroup.add(bakeStatic(block));
 
-      blocks.push({ ix, iz, x: bx, z: bz, district: districtName, isPark, allowCross });
+      blocks.push({ ix, iz, x: bx, z: bz, district: districtName, landmark, isPark, allowCross });
     });
   });
 
