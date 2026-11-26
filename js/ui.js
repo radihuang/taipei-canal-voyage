@@ -33,6 +33,14 @@ export class GameUI {
     this.passengerDestsEl = document.getElementById("passenger-dests");
     this.passengerDomMap = new Map();
 
+    this.knowledgeEl = document.getElementById("knowledge-card");
+    this.knowledgeEyebrowEl = document.getElementById("knowledge-eyebrow");
+    this.knowledgeTitleEl = document.getElementById("knowledge-title");
+    this.knowledgeBodyEl = document.getElementById("knowledge-body");
+    this.knowledgeSourcesEl = document.getElementById("knowledge-sources");
+    this.knowledgeTimer = null;
+    document.getElementById("knowledge-close").addEventListener("click", () => this.hideKnowledgeCard());
+
     this.npcDomMap = new Map();
     this.playerBubbleEl = this._createBubbleEl();
     this.playerBubbleTimer = 0;
@@ -353,6 +361,37 @@ export class GameUI {
         this.passengerDomMap.delete(id);
       }
     }
+  }
+
+  // 送達知識卡：全部用 textContent／href 組裝，不用 innerHTML
+  showKnowledgeCard(card, { collected, total, isNew }, license) {
+    this.knowledgeEyebrowEl.textContent = `${isNew ? "新知識卡" : "知識卡"} ${collected} / ${total}`;
+    this.knowledgeTitleEl.textContent = card.title;
+    this.knowledgeBodyEl.textContent = card.body;
+
+    this.knowledgeSourcesEl.replaceChildren();
+    const addLink = (prefix, src) => {
+      const li = document.createElement("li");
+      li.append(prefix);
+      const a = document.createElement("a");
+      a.href = src.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = src.label;
+      li.append(a);
+      this.knowledgeSourcesEl.append(li);
+    };
+    card.sources.forEach((src, i) => addLink(i === 0 ? "來源：" : "核對：", src));
+    addLink("授權：", license);
+
+    this.knowledgeEl.classList.remove("hidden");
+    clearTimeout(this.knowledgeTimer);
+    this.knowledgeTimer = setTimeout(() => this.hideKnowledgeCard(), 14000);
+  }
+
+  hideKnowledgeCard() {
+    clearTimeout(this.knowledgeTimer);
+    this.knowledgeEl.classList.add("hidden");
   }
 
   // 小地圖：以玩家為中心顯示附近約 4 x 4 個街廓，並標出行政區名

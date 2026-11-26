@@ -8,6 +8,7 @@ import { GameUI } from "./ui.js";
 import { PedestrianManager } from "./pedestrians.js";
 import { updateSeeThrough } from "./seeThrough.js";
 import { PassengerManager } from "./passengers.js";
+import { KNOWLEDGE_CARDS, KNOWLEDGE_LICENSE } from "./knowledgeCards.js";
 
 // ===== 1. 建立 Three.js 場景、紀念碑谷低視角攝影機與渲染器 =====
 const container = document.getElementById("canvas-container");
@@ -91,6 +92,7 @@ scene.add(playerBoat.group);
 
 // 岸邊等船的乘客與船上乘客
 const passengers = new PassengerManager(scene, city.blocks, city.blockTop);
+const collectedCards = new Set(); // 本次遊玩已讀過的知識卡
 passengers.attachToBoat(playerBoat, BOAT_TIERS[0]);
 
 // 玩家登船後站在對方甲板上的分身小人
@@ -514,6 +516,16 @@ function animate() {
       ui.showToast(`送達${ev.passenger.dest.label}！+${ev.points} 分`);
       ui.showPlayerBubble("到囉～路上小心！");
       addScore(ev.points);
+      const card = KNOWLEDGE_CARDS[ev.passenger.dest.key];
+      if (card) {
+        const isNew = !collectedCards.has(ev.passenger.dest.key);
+        collectedCards.add(ev.passenger.dest.key);
+        ui.showKnowledgeCard(card, {
+          collected: collectedCards.size,
+          total: Object.keys(KNOWLEDGE_CARDS).length,
+          isNew
+        }, KNOWLEDGE_LICENSE);
+      }
     } else if (ev.type === "needBigger") {
       ui.showToast("有人想搭船！升級成帆船或海盜船才能載客喔", { soft: true });
     } else if (ev.type === "full") {
