@@ -6,6 +6,7 @@ import { NPCManager } from "./npc.js";
 import { InputController } from "./controls.js";
 import { GameUI } from "./ui.js";
 import { PedestrianManager } from "./pedestrians.js";
+import { updateSeeThrough } from "./seeThrough.js";
 
 // ===== 1. 建立 Three.js 場景、紀念碑谷低視角攝影機與渲染器 =====
 const container = document.getElementById("canvas-container");
@@ -501,6 +502,8 @@ function animate() {
     .addScaledVector(BASE_CAM_OFFSET, zoomFactor);
   camera.position.lerp(camDesiredPos, Math.min(1, dt * 5.2));
   camera.lookAt(camTarget.x, camTarget.y + 1.4, camTarget.z);
+  camera.updateMatrixWorld();
+  updateSeeThrough(camera, state.pos, renderer);
 
   // 更新 HUD、路名、漂浮泡泡與小地圖
   ui.updateInteraction({

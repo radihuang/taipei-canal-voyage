@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { WORLD_CONFIG, DISTRICT_GRID, DISTRICTS } from "./config.js";
 import { makeMat, createTreeSpecies, SPECIES_KEYS } from "./trees.js";
 import { bakeStatic } from "./bake.js";
+import { applySeeThrough } from "./seeThrough.js";
 
 // 紀念碑谷柔和建築色盤（溫潤莫蘭迪粉橘、砂岩米、灰藍、豆沙綠）
 const PALETTE = {
@@ -601,6 +602,11 @@ export function buildTaipeiCity(scene) {
     });
   });
   cityGroup.add(bakeStatic(bridgeGroup));
+
+  // 城市所有靜態材質都套上視線穿透（水面另外建，不受影響）
+  cityGroup.traverse((o) => {
+    if (o.isMesh) applySeeThrough(o.material);
+  });
 
   scene.add(cityGroup);
 
