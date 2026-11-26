@@ -2,7 +2,7 @@
 
 // 樹種代號（造型定義在 trees.js）
 // 每條運河的行道樹，依臺北市公園處「行道樹資料」開放資料（2026-11-26 版）統計：
-// 取該路段在本遊戲 8 種樹裡數量最多者，括號為實際棵數。
+// 取該路段在本遊戲 9 種樹裡數量最多者，數字為實際棵數；前兩名接近時兩種交錯種。
 export const TREE_NAMES = {
   camphor: "樟樹",
   goldenrain: "臺灣欒樹",
@@ -11,7 +11,8 @@ export const TREE_NAMES = {
   sweetgum: "楓香",
   goldenshower: "阿勃勒",
   bishopwood: "茄苳",
-  chinaberry: "苦楝"
+  chinaberry: "苦楝",
+  royalpalm: "大王椰子"
 };
 
 const LINES = [-175, -125, -75, -25, 25, 75, 125, 175];
@@ -31,7 +32,7 @@ export const WORLD_CONFIG = {
     { z: LINES[2], name: "北安運河", trees: ["melaleuca"] }, // 白千層 459
     { z: LINES[3], name: "南京運河", trees: ["sweetgum"] }, // 楓香 427
     { z: LINES[4], name: "忠孝運河", trees: ["bishopwood"] }, // 茄苳 523
-    { z: LINES[5], name: "仁愛運河", trees: ["camphor"] }, // 樟樹 1044（最多的是大王椰子 1097）
+    { z: LINES[5], name: "仁愛運河", trees: ["royalpalm", "camphor"] }, // 大王椰子 1097、樟樹 1044
     { z: LINES[6], name: "和平運河", trees: ["melaleuca"] }, // 白千層 431
     { z: LINES[7], name: "辛亥運河", trees: ["goldenrain"] } // 臺灣欒樹 265
   ],

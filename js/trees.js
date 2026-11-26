@@ -25,7 +25,9 @@ const GEO = {
   cone: new THREE.ConeGeometry(1, 1, 7),
   disc: new THREE.CylinderGeometry(1, 1, 1, 8),
   drop: new THREE.ConeGeometry(1, 1, 5),
-  dot: new THREE.OctahedronGeometry(1, 0)
+  dot: new THREE.OctahedronGeometry(1, 0),
+  // 葉片從根部往外長，旋轉時以葉柄為支點
+  frond: new THREE.BoxGeometry(1, 1, 1).translate(0.5, 0, 0)
 };
 
 function part(g, geo, mat, [x, y, z], [sx, sy, sz], rotY = 0) {
@@ -107,6 +109,23 @@ const BUILDERS = {
     part(g, GEO.trunk, makeMat(0x7d6553), [0, 0.8, 0], [1.6, 1.6, 1.6]);
     part(g, GEO.ico, makeMat(0x6aa257), [0, 2.55, 0], [1.45, 1.15, 1.45]);
     part(g, GEO.ico, makeMat(0x7bb265), [0.2, 3.25, 0.1], [0.9, 0.6, 0.9]);
+  },
+
+  // 大王椰子：灰白光滑的高瘦樹幹，頂端綠色葉鞘與一圈下垂的羽狀葉
+  royalpalm(g) {
+    part(g, GEO.trunk, makeMat(0xcfc8bd), [0, 2.1, 0], [1.25, 4.2, 1.25]);
+    part(g, GEO.trunk, makeMat(0xc4bcb0), [0, 0.6, 0], [1.75, 1.2, 1.75]); // 基部略膨大
+    part(g, GEO.disc, makeMat(0x7fa36a), [0, 4.55, 0], [0.2, 0.75, 0.2]); // 葉鞘
+    const frondMats = [makeMat(0x6f9e5c), makeMat(0x82ad6a)];
+    for (let i = 0; i < 8; i++) {
+      const f = new THREE.Mesh(GEO.frond, frondMats[i % 2]);
+      f.position.set(0, 4.95, 0);
+      f.scale.set(1.9, 0.06, 0.42);
+      f.rotation.order = "YZX"; // 先往下垂（z），再繞樹幹轉（y）
+      f.rotation.y = (i / 8) * Math.PI * 2;
+      f.rotation.z = i % 2 ? -0.55 : -0.25;
+      g.add(f);
+    }
   },
 
   // 苦楝：細枝撐開的傘形淡綠樹冠，點綴淡紫
