@@ -1,27 +1,87 @@
 // 遊戲核心參數設定（方便後續調整配色、船隻數值、路名與對話）
 
+// 樹種代號（造型定義在 trees.js）
+// 每條運河的行道樹，依臺北市公園處「行道樹資料」開放資料（2026-11-26 版）統計：
+// 取該路段在本遊戲 8 種樹裡數量最多者，括號為實際棵數。
+export const TREE_NAMES = {
+  camphor: "樟樹",
+  goldenrain: "臺灣欒樹",
+  terminalia: "小葉欖仁",
+  melaleuca: "白千層",
+  sweetgum: "楓香",
+  goldenshower: "阿勃勒",
+  bishopwood: "茄苳",
+  chinaberry: "苦楝"
+};
+
+const LINES = [-175, -125, -75, -25, 25, 75, 125, 175];
+
 export const WORLD_CONFIG = {
-  // 4 條東西向運河 + 4 條南北向運河（中心座標）
-  canalLines: [-75, -25, 25, 75],
+  // 8 條東西向 + 8 條南北向運河（中心座標），圍出 7 x 7 個街廓
+  canalLines: LINES,
   canalWidth: 16,
-  halfExtent: 83, // 最外圍運河岸線
-  blockCenters: [-50, 0, 50],
+  halfExtent: 183, // 最外圍運河岸線
+  blockCenters: [-150, -100, -50, 0, 50, 100, 150],
   blockHalfSize: 17, // 每個街廓為 34 x 34
 
-  // 台北主要道路化作的運河名稱
+  // 由北到南（z 由小到大）
   ewCanals: [
-    { z: -75, name: "市民大道運河" },
-    { z: -25, name: "忠孝運河" },
-    { z: 25, name: "仁愛運河" },
-    { z: 75, name: "信義運河" }
+    { z: LINES[0], name: "大度運河", trees: ["bishopwood"] }, // 茄苳 373
+    { z: LINES[1], name: "福國運河", trees: ["chinaberry"] }, // 苦楝 151
+    { z: LINES[2], name: "北安運河", trees: ["melaleuca"] }, // 白千層 459
+    { z: LINES[3], name: "南京運河", trees: ["sweetgum"] }, // 楓香 427
+    { z: LINES[4], name: "忠孝運河", trees: ["bishopwood"] }, // 茄苳 523
+    { z: LINES[5], name: "仁愛運河", trees: ["camphor"] }, // 樟樹 1044（最多的是大王椰子 1097）
+    { z: LINES[6], name: "和平運河", trees: ["melaleuca"] }, // 白千層 431
+    { z: LINES[7], name: "辛亥運河", trees: ["goldenrain"] } // 臺灣欒樹 265
   ],
+  // 由西到東（x 由小到大）
   nsCanals: [
-    { x: -75, name: "中山運河" },
-    { x: -25, name: "復興運河" },
-    { x: 25, name: "敦化運河" },
-    { x: 75, name: "光復運河" }
+    { x: LINES[0], name: "艋舺運河", trees: ["terminalia"] }, // 小葉欖仁 102
+    { x: LINES[1], name: "中華運河", trees: ["bishopwood"] }, // 茄苳 225
+    { x: LINES[2], name: "中山運河", trees: ["camphor"] }, // 中山北路 樟樹 1031
+    { x: LINES[3], name: "長興運河", trees: ["goldenshower"] }, // 長興街 阿勃勒 124
+    { x: LINES[4], name: "敦化運河", trees: ["camphor", "goldenrain"] }, // 敦化南路 欒樹 921、樟樹 822
+    { x: LINES[5], name: "光復運河", trees: ["sweetgum"] }, // 光復南路 楓香 218
+    { x: LINES[6], name: "堤頂運河", trees: ["chinaberry", "goldenshower"] }, // 苦楝 537、阿勃勒 237
+    { x: LINES[7], name: "南港運河", trees: ["bishopwood"] } // 南港路 茄苳 72
   ]
 };
+
+// 行政區：位置只抓相對方位，不照實際比例
+// 每列由西到東、由北到南排，對應 blockCenters
+export const DISTRICT_GRID = [
+  ["北投", "北投", "士林", "士林", "士林", "內湖", "內湖"],
+  ["北投", "士林", "士林", "中山", "內湖", "內湖", "內湖"],
+  ["大同", "大同", "中山", "中山", "松山", "松山", "南港"],
+  ["萬華", "大同", "中山", "松山", "松山", "信義", "南港"],
+  ["萬華", "中正", "大安", "大安", "大安", "信義", "南港"],
+  ["萬華", "中正", "大安", "大安", "信義", "信義", "南港"],
+  ["文山", "文山", "文山", "文山", "文山", "信義", "南港"]
+];
+
+// 每區的建築高度、配色、廣場地坪色、公園比例、小地圖色
+export const DISTRICTS = {
+  北投: { heights: [5, 10], palette: [0xe9d8c5, 0xf4ece1, 0x99b8a9, 0xe39d85], plaza: 0xdfe8d6, park: 0.45, map: "#c9dcc0" },
+  士林: { heights: [6, 12], palette: [0xf4ece1, 0xeac2bd, 0xe9d8c5, 0x99b8a9], plaza: 0xe8eadc, park: 0.3, map: "#dfe3cc" },
+  內湖: { heights: [10, 20], palette: [0x8fa3ba, 0xfbf7f0, 0x8cc2bf, 0xf4ece1], plaza: 0xe4ebee, park: 0.2, map: "#d3dde6" },
+  大同: { heights: [5, 9], palette: [0xe39d85, 0xe9d8c5, 0xd9a58a, 0xf4ece1], plaza: 0xf0e2d2, park: 0.08, map: "#efd5c2" },
+  中山: { heights: [9, 18], palette: [0xeac2bd, 0xf4ece1, 0xe9d8c5, 0xfbf7f0], plaza: 0xf6ece8, park: 0.12, map: "#f2dcd6" },
+  松山: { heights: [9, 19], palette: [0x8fa3ba, 0xf4ece1, 0xeac2bd, 0xe9d8c5], plaza: 0xeeeef0, park: 0.12, map: "#e1e2ea" },
+  萬華: { heights: [4, 8], palette: [0xe39d85, 0xd9a58a, 0xe9d8c5, 0xeac2bd], plaza: 0xf2dfcf, park: 0.08, map: "#ecccb6" },
+  中正: { heights: [8, 16], palette: [0xfbf7f0, 0xf4ece1, 0x8fa3ba, 0xe9d8c5], plaza: 0xf7f2ea, park: 0.15, map: "#f3ede2" },
+  大安: { heights: [8, 18], palette: [0xeac2bd, 0xf4ece1, 0xe39d85, 0xfbf7f0], plaza: 0xf7efe6, park: 0.15, map: "#f4e3d8" },
+  信義: { heights: [15, 26], palette: [0x8cc2bf, 0x8fa3ba, 0xfbf7f0, 0xeac2bd], plaza: 0xe6f0ef, park: 0.08, map: "#cfe3e1" },
+  南港: { heights: [11, 21], palette: [0x8fa3ba, 0x8cc2bf, 0xf4ece1, 0xfbf7f0], plaza: 0xe2e9ec, park: 0.18, map: "#d0dbe2" },
+  文山: { heights: [5, 11], palette: [0xf4ece1, 0x99b8a9, 0xe9d8c5, 0xeac2bd], plaza: 0xdde8d8, park: 0.45, map: "#c6dcc4" }
+};
+
+// 取得某世界座標所在（或最近）的街廓索引
+export function blockIndexAt(x, z) {
+  const c = WORLD_CONFIG.blockCenters;
+  const toIdx = (v) => Math.max(0, Math.min(c.length - 1, Math.round((v - c[0]) / 50)));
+  return { ix: toIdx(x), iz: toIdx(z) };
+}
 
 // 三種橘色船隻尺寸與升級門檻
 export const BOAT_TIERS = [

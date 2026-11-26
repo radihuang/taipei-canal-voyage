@@ -291,6 +291,16 @@ body.theme-night .boat-pill {
   font-weight: 600;
   color: var(--ink-soft);
   letter-spacing: 0.04em;
+  max-width: 132px;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.location-trees {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 /* Banners & Toast */
@@ -616,6 +626,11 @@ body.theme-night .boat-pill {
   #minimap {
     width: 88px;
     height: 88px;
+  }
+
+  .location-tag {
+    max-width: 100px;
+    font-size: 10px;
   }
 
   .interact-bar {

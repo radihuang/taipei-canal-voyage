@@ -5,6 +5,7 @@ import { createBoatMesh, createMinimalCharacter } from "./boats.js";
 import { NPCManager } from "./npc.js";
 import { InputController } from "./controls.js";
 import { GameUI } from "./ui.js";
+import { PedestrianManager } from "./pedestrians.js";
 
 // ===== 1. 建立 Three.js 場景、紀念碑谷低視角攝影機與渲染器 =====
 const container = document.getElementById("canvas-container");
@@ -55,6 +56,7 @@ sunLight.shadow.camera.top = dShadow;
 sunLight.shadow.camera.bottom = -dShadow;
 sunLight.shadow.bias = -0.0006;
 scene.add(sunLight);
+scene.add(sunLight.target); // 陰影範圍跟著玩家移動，大地圖上任何地方都有影子
 
 // 玩家船隻周邊微暖補光（夜晚划船時特別有氛圍）
 const playerGlowLight = new THREE.PointLight(0xffb56b, 0, 22, 1.5);
@@ -63,6 +65,7 @@ scene.add(playerGlowLight);
 // ===== 3. 建置台北運河世界與 NPC =====
 const city = buildTaipeiCity(scene);
 const npcManager = new NPCManager(scene);
+const pedestrians = new PedestrianManager(scene, city.blocks, city.blockTop);
 
 // ===== 4. 玩家狀態與橘船建立 =====
 const state = {
@@ -71,12 +74,13 @@ const state = {
   currentTier: 0,
   maxUnlockedTier: 0,
   timeKey: "noon",
-  pos: new THREE.Vector3(25, 0, 12), // 出生在敦化運河 × 大安水岸旁
+  pos: new THREE.Vector3(-25, 0, 40), // 出生在大安森林公園西側運河（鏡頭方向是公園，不會被高樓擋住）
   vel: new THREE.Vector3(),
   yaw: 0,
   boardedNpc: null,
   stowAnimScale: 1,
-  passengerBonusTimer: 0
+  passengerBonusTimer: 0,
+  district: null
 };
 
 let playerBoat = createBoatMesh(0, { isPlayer: true });
@@ -280,6 +284,7 @@ const ui = new GameUI({
   }
 });
 ui.updateStats(state);
+ui.setBlocks(city.blocks);
 
 const input = new InputController({
   onGreet: handleGreet,
@@ -346,7 +351,8 @@ function updateLighting(dt) {
   sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, preset.sunIntensity, t);
 
   curLight.sunPos.lerp(tmpVec.set(...preset.sunPos), t);
-  sunLight.position.copy(curLight.sunPos);
+  sunLight.position.copy(camTarget).add(curLight.sunPos);
+  sunLight.target.position.copy(camTarget);
 
   curLight.hemiSky.lerp(tmpColor.setHex(preset.hemiSky), t);
   curLight.hemiGround.lerp(tmpColor.setHex(preset.hemiGround), t);
@@ -401,6 +407,7 @@ function animate() {
 
   // 先更新 NPC 位置，再讓登船分身同步貼合甲板（零延遲）
   npcManager.update(dt, elapsed, currentNearestNpc ? currentNearestNpc.id : -1);
+  pedestrians.update(dt, elapsed);
 
   if (state.boardedNpc) {
     // ===== 乘客模式：跟著船友一起漂流 =====
@@ -500,7 +507,11 @@ function animate() {
     nearestNpc: currentNearestNpc,
     boardedNpc: state.boardedNpc
   });
-  ui.updateLocationName(state.pos);
+  const district = ui.updateLocationName(state.pos);
+  if (district !== state.district) {
+    if (state.district) ui.showToast(`進入${district}區`, { soft: true });
+    state.district = district;
+  }
   ui.updateFloatingLabels(dt, camera, state.pos, npcManager.npcs, currentNearestNpc);
   ui.drawMinimap(state.pos, npcManager.npcs, TIME_PRESETS[state.timeKey].isNight);
 

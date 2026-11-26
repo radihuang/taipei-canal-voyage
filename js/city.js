@@ -1,5 +1,7 @@
 import * as THREE from "three";
-import { WORLD_CONFIG } from "./config.js";
+import { WORLD_CONFIG, DISTRICT_GRID, DISTRICTS } from "./config.js";
+import { makeMat, createTreeSpecies, SPECIES_KEYS } from "./trees.js";
+import { bakeStatic } from "./bake.js";
 
 // 紀念碑谷柔和建築色盤（溫潤莫蘭迪粉橘、砂岩米、灰藍、豆沙綠）
 const PALETTE = {
@@ -16,58 +18,7 @@ const PALETTE = {
   bridge: 0xf6efe6
 };
 
-function makeMat(color, roughness = 0.82) {
-  return new THREE.MeshStandardMaterial({
-    color,
-    roughness,
-    metalness: 0.02,
-    flatShading: true
-  });
-}
-
-// 幾何柏樹 / 行道樹（紀念碑谷俐落剪影）
-function createTree(x, z, scale = 1, variant = 0) {
-  const g = new THREE.Group();
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.16, 0.22, 1.1, 6),
-    makeMat(0x9b7e6b, 0.85)
-  );
-  trunk.position.y = 0.55;
-  trunk.castShadow = true;
-  g.add(trunk);
-
-  const foliageColor = variant % 2 === 0 ? 0x6f9e8c : 0x88b39a;
-  if (variant % 3 === 0) {
-    // 尖塔柏樹
-    const crown = new THREE.Mesh(
-      new THREE.ConeGeometry(0.85, 2.8, 7),
-      makeMat(foliageColor, 0.8)
-    );
-    crown.position.y = 2.25;
-    crown.castShadow = true;
-    g.add(crown);
-  } else {
-    // 雙球幾何樹
-    const c1 = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.92, 0),
-      makeMat(foliageColor, 0.82)
-    );
-    c1.position.y = 1.95;
-    c1.castShadow = true;
-    g.add(c1);
-    const c2 = new THREE.Mesh(
-      new THREE.DodecahedronGeometry(0.62, 0),
-      makeMat(0x9fc2a9, 0.82)
-    );
-    c2.position.set(0.38, 2.55, 0.2);
-    c2.castShadow = true;
-    g.add(c2);
-  }
-
-  g.position.set(x, 1.2, z);
-  g.scale.setScalar(scale);
-  return g;
-}
+const winGeo = new THREE.BoxGeometry(0.55, 0.95, 0.12);
 
 // 建立一棟帶發光窗格的紀念碑谷建築
 function createMinimalBuilding({
@@ -95,7 +46,6 @@ function createMinimalBuilding({
   const colsX = Math.max(1, Math.floor((w - 1.6) / 2.1));
   const colsZ = Math.max(1, Math.floor((d - 1.6) / 2.1));
 
-  const winGeo = new THREE.BoxGeometry(0.55, 0.95, 0.12);
   for (let f = 0; f < floors; f++) {
     const wy = 2.0 + f * 2.15;
     if (wy > h - 1.0) break;
@@ -358,9 +308,31 @@ function createCanalBridge(x, z, rotateY, lanternMat) {
   return g;
 }
 
+// 固定種子的亂數：每次載入地圖長得一樣
+function seededRandom(seed) {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const BLOCK_TOP = 1.35; // 街廓廣場地面高度
+export const WALK_RADIUS = 13.2; // 行人沿街廓外圈散步的半徑
+
+// 特殊地標所在街廓（ix, iz）
+const LANDMARKS = {
+  "5,4": "taipei101",
+  "1,4": "memorial",
+  "3,4": "daanPark"
+};
+
 // 建立完整台北運河城市與動態水面
 export function buildTaipeiCity(scene) {
   const cityGroup = new THREE.Group();
+  const rand = seededRandom(20261126);
 
   // 共用自發光材質（隨晝夜自動切換亮度）
   const windowMat = new THREE.MeshStandardMaterial({
@@ -377,8 +349,12 @@ export function buildTaipeiCity(scene) {
     roughness: 0.3
   });
 
+  const outerR = WORLD_CONFIG.halfExtent;
+  const rimThickness = 18;
+
   // ===== 1. 動態幾何水面 =====
-  const waterGeo = new THREE.PlaneGeometry(320, 320, 56, 56);
+  const waterSize = (outerR + rimThickness) * 2 + 40;
+  const waterGeo = new THREE.PlaneGeometry(waterSize, waterSize, 84, 84);
   waterGeo.rotateX(-Math.PI / 2);
   const waterPos = waterGeo.attributes.position;
   const baseY = new Float32Array(waterPos.count);
@@ -397,68 +373,61 @@ export function buildTaipeiCity(scene) {
   waterMesh.receiveShadow = true;
   scene.add(waterMesh);
 
-  // ===== 2. 外圍運河護岸邊框 =====
-  const outerR = WORLD_CONFIG.halfExtent;
-  const rimThickness = 18;
+  // ===== 2. 外圍運河護岸與遠景樹列 =====
+  const rimGroup = new THREE.Group();
   const rimLen = outerR * 2 + rimThickness * 2;
-  const rimConfigs = [
+  [
     [0, -(outerR + rimThickness / 2), rimLen, rimThickness],
     [0, outerR + rimThickness / 2, rimLen, rimThickness],
     [-(outerR + rimThickness / 2), 0, rimThickness, outerR * 2],
     [outerR + rimThickness / 2, 0, rimThickness, outerR * 2]
-  ];
-  rimConfigs.forEach(([rx, rz, rw, rd]) => {
+  ].forEach(([rx, rz, rw, rd]) => {
     const rim = new THREE.Mesh(
       new THREE.BoxGeometry(rw, 1.8, rd),
       makeMat(PALETTE.quayWall)
     );
     rim.position.set(rx, 0.5, rz);
-    rim.receiveShadow = true;
-    cityGroup.add(rim);
+    rimGroup.add(rim);
   });
-
-  // 外岸點綴遠景輪廓山與幾何塔群
-  for (let i = -3; i <= 3; i++) {
-    const p = i * 24;
-    cityGroup.add(createTree(p, -(outerR + 5), 1.35, Math.abs(i)));
-    cityGroup.add(createTree(p, outerR + 5, 1.25, Math.abs(i) + 1));
-    cityGroup.add(createTree(-(outerR + 5), p, 1.3, Math.abs(i) + 2));
-    cityGroup.add(createTree(outerR + 5, p, 1.3, Math.abs(i)));
+  for (let p = -outerR + 8; p <= outerR - 8; p += 12) {
+    const sp = () => SPECIES_KEYS[Math.floor(rand() * SPECIES_KEYS.length)];
+    const s = () => 1.2 + rand() * 0.4;
+    rimGroup.add(createTreeSpecies(sp(), p, 1.4, -(outerR + 5), s(), rand() * 6));
+    rimGroup.add(createTreeSpecies(sp(), p, 1.4, outerR + 5, s(), rand() * 6));
+    rimGroup.add(createTreeSpecies(sp(), -(outerR + 5), 1.4, p, s(), rand() * 6));
+    rimGroup.add(createTreeSpecies(sp(), outerR + 5, 1.4, p, s(), rand() * 6));
   }
+  cityGroup.add(bakeStatic(rimGroup));
 
-  // ===== 3. 九大台北幾何街廓 =====
+  // ===== 3. 7 x 7 台北行政區街廓 =====
   const blockSize = WORLD_CONFIG.blockHalfSize * 2; // 34
-  const pastelColors = [
-    PALETTE.stone,
-    PALETTE.blush,
-    PALETTE.sand,
-    PALETTE.terracotta,
-    PALETTE.slate,
-    PALETTE.ivory
-  ];
+  const blocks = [];
+  let streetTreeCount = 0;
 
-  let colorIdx = 0;
+  const centers = WORLD_CONFIG.blockCenters;
+  centers.forEach((bz, iz) => {
+    centers.forEach((bx, ix) => {
+      const districtName = DISTRICT_GRID[iz][ix];
+      const district = DISTRICTS[districtName];
+      const landmark = LANDMARKS[`${ix},${iz}`] || null;
+      const isPark = landmark === "daanPark" || (!landmark && rand() < district.park);
 
-  WORLD_CONFIG.blockCenters.forEach((bx, ix) => {
-    WORLD_CONFIG.blockCenters.forEach((bz, iz) => {
       const block = new THREE.Group();
       block.position.set(bx, 0, bz);
 
-      // 河岸石砌基座 + 親水階梯邊緣
+      // 河岸石砌基座 + 廣場地坪（依行政區上色）
       const base = new THREE.Mesh(
         new THREE.BoxGeometry(blockSize, 1.4, blockSize),
         makeMat(PALETTE.quayWall, 0.85)
       );
       base.position.y = 0.5;
-      base.receiveShadow = true;
       block.add(base);
 
       const topPlaza = new THREE.Mesh(
         new THREE.BoxGeometry(blockSize - 1.6, 0.2, blockSize - 1.6),
-        makeMat(ix === 1 && iz === 1 ? 0xb4cfb8 : PALETTE.ivory, 0.88)
+        makeMat(isPark ? 0xb4cfb8 : district.plaza, 0.88)
       );
       topPlaza.position.y = 1.25;
-      topPlaza.receiveShadow = true;
       block.add(topPlaza);
 
       // 四角水岸提燈
@@ -484,9 +453,29 @@ export function buildTaipeiCity(scene) {
         block.add(bulb);
       });
 
-      // --- 依照台北方位放置特色地標 ---
-      if (ix === 2 && iz === 2) {
-        // 東南角（信義區）：台北 101 廣場
+      // --- 沿岸行道樹：每一邊種它面對那條運河的樹種 ---
+      const sides = [
+        { canal: WORLD_CONFIG.ewCanals[iz], along: "x", fixed: -15.2 }, // 北岸
+        { canal: WORLD_CONFIG.ewCanals[iz + 1], along: "x", fixed: 15.2 }, // 南岸
+        { canal: WORLD_CONFIG.nsCanals[ix], along: "z", fixed: -15.2 }, // 西岸
+        { canal: WORLD_CONFIG.nsCanals[ix + 1], along: "z", fixed: 15.2 } // 東岸
+      ];
+      sides.forEach(({ canal, along, fixed }) => {
+        let k = 0;
+        for (let t = -12; t <= 12; t += 4) {
+          const species = canal.trees[k % canal.trees.length];
+          const tx = along === "x" ? t : fixed;
+          const tz = along === "x" ? fixed : t;
+          block.add(createTreeSpecies(species, tx, BLOCK_TOP, tz, 0.95 + rand() * 0.25, rand() * 6));
+          k++;
+          streetTreeCount++;
+        }
+      });
+
+      // 行人能不能穿越街廓中央的十字步道
+      let allowCross = true;
+
+      if (landmark === "taipei101") {
         const t101 = createTaipei101(windowMat, lanternMat);
         t101.position.set(1.5, 1.3, 1.5);
         block.add(t101);
@@ -497,22 +486,19 @@ export function buildTaipeiCity(scene) {
           windowMat,
           hasArch: true
         });
-        annex.position.set(-9.5, 1.3, -9.2);
+        annex.position.set(-8.3, 1.3, -8.3);
         block.add(annex);
-
-        block.add(createTree(-10, 9.5, 1.25, 0));
-        block.add(createTree(10, -10, 1.2, 1));
-      } else if (ix === 0 && iz === 2) {
-        // 西南角（中正區）：紀念堂白藍穹頂廣場
+        allowCross = false;
+      } else if (landmark === "memorial") {
         const hall = createMemorialHall(lanternMat);
         hall.position.set(0, 1.3, 0);
         block.add(hall);
-        block.add(createTree(-12.5, -12.5, 1.2, 0));
-        block.add(createTree(12.5, -12.5, 1.2, 0));
-        block.add(createTree(-12.5, 12.5, 1.2, 0));
-        block.add(createTree(12.5, 12.5, 1.2, 0));
-      } else if (ix === 1 && iz === 1) {
-        // 市中心：大安水岸森林公園（綠意幾何涼亭與樹林）
+        [[-11.5, -11.5], [11.5, -11.5], [-11.5, 11.5], [11.5, 11.5]].forEach(([tx, tz]) => {
+          block.add(createTreeSpecies("camphor", tx, BLOCK_TOP, tz, 1.1, rand() * 6));
+        });
+        allowCross = false;
+      } else if (landmark === "daanPark") {
+        // 大安森林公園：幾何涼亭與混種樹林
         const pavilionBase = new THREE.Mesh(
           new THREE.CylinderGeometry(4.6, 5.2, 0.8, 8),
           makeMat(PALETTE.ivory)
@@ -535,63 +521,86 @@ export function buildTaipeiCity(scene) {
           makeMat(PALETTE.terracotta)
         );
         pavRoof.position.y = 6.7;
-        pavRoof.castShadow = true;
         block.add(pavRoof);
 
-        const treeCoords = [
-          [-10.5, -10.5], [10.5, -10.5], [-10.5, 10.5], [10.5, 10.5],
-          [-11.5, 0.5], [11.5, -0.5], [0.5, -11.5], [-0.5, 11.5],
-          [-6.5, -6.5], [7.0, 6.0]
-        ];
-        treeCoords.forEach(([tx, tz], ti) => {
-          block.add(createTree(tx, tz, 1.05 + (ti % 3) * 0.22, ti));
+        [
+          [-10, -10], [10, -10], [-10, 10], [10, 10],
+          [-10.5, -4], [10.5, 4], [4, -10.5], [-4, 10.5],
+          [-6.8, -6.8], [7, 6.5], [-7, 6], [6.5, -7]
+        ].forEach(([tx, tz], ti) => {
+          block.add(createTreeSpecies(SPECIES_KEYS[ti % SPECIES_KEYS.length], tx, BLOCK_TOP, tz, 1.0 + rand() * 0.3, rand() * 6));
         });
+        allowCross = false;
+      } else if (isPark) {
+        // 一般公園街廓：混種樹林，北投、文山多了幾座小山丘
+        const hilly = districtName === "北投" || districtName === "文山";
+        if (hilly) {
+          [[-6.5, -6.5], [6.5, 6.5]].forEach(([hx, hz], hi) => {
+            const hill = new THREE.Mesh(
+              new THREE.DodecahedronGeometry(1, 0),
+              makeMat(hi ? 0x99b8a9 : 0x8aae95)
+            );
+            hill.position.set(hx, BLOCK_TOP, hz);
+            hill.scale.set(4.2, 2.6 + rand() * 1.4, 4.2);
+            block.add(hill);
+          });
+        }
+        for (let n = 0; n < 14; n++) {
+          const tx = (rand() * 2 - 1) * 10.5;
+          const tz = (rand() * 2 - 1) * 10.5;
+          if (Math.abs(tx) < 1.8 || Math.abs(tz) < 1.8) continue; // 留出步道
+          if (hilly && (Math.hypot(tx + 6.5, tz + 6.5) < 4.5 || Math.hypot(tx - 6.5, tz - 6.5) < 4.5)) continue;
+          const sp = SPECIES_KEYS[Math.floor(rand() * SPECIES_KEYS.length)];
+          block.add(createTreeSpecies(sp, tx, BLOCK_TOP, tz, 0.95 + rand() * 0.35, rand() * 6));
+        }
       } else {
-        // 其餘台北幾何街廓（忠孝、敦化、松菸、中山風建築群）
-        const layouts = [
-          { x: -7.5, z: -7.5, w: 9.2, d: 8.8, h: 10 + ((ix + iz * 2) % 4) * 4.2 },
-          { x: 7.8, z: -6.8, w: 8.4, d: 9.5, h: 8 + ((ix * 2 + iz) % 3) * 4.5 },
-          { x: -6.8, z: 7.8, w: 9.0, d: 8.2, h: 12 + ((ix + iz) % 3) * 3.5 },
-          { x: 7.6, z: 7.6, w: 7.6, d: 7.6, h: 7 + ((ix * 3 + iz) % 3) * 3.0 }
+        // 一般街廓：四棟建築，高度與配色依行政區而不同
+        const [hMin, hMax] = district.heights;
+        const slots = [
+          { x: -7.5, z: -7.5 },
+          { x: 7.6, z: -7.2 },
+          { x: -7.2, z: 7.6 },
+          { x: 7.5, z: 7.5 }
         ];
-
-        layouts.forEach((b, bi) => {
+        slots.forEach((slot, bi) => {
           const bld = createMinimalBuilding({
-            w: b.w,
-            h: b.h,
-            d: b.d,
-            color: pastelColors[(colorIdx + bi) % pastelColors.length],
+            w: 6.6 + rand() * 2.8,
+            d: 6.6 + rand() * 2.8,
+            h: hMin + rand() * (hMax - hMin),
+            color: district.palette[Math.floor(rand() * district.palette.length)],
             windowMat,
             hasArch: bi === 0,
             hasStairs: bi === 2
           });
-          bld.position.set(b.x, 1.3, b.z);
+          bld.position.set(slot.x, 1.3, slot.z);
           block.add(bld);
         });
-        colorIdx += 2;
-
-        // 街廓中庭小樹
-        block.add(createTree(0, 0, 1.2, ix + iz));
-        block.add(createTree(0, -11.5, 0.95, ix + 1));
-        block.add(createTree(0, 11.5, 0.95, iz + 2));
       }
 
-      cityGroup.add(block);
+      block.updateMatrixWorld(true);
+      cityGroup.add(bakeStatic(block));
+
+      blocks.push({ ix, iz, x: bx, z: bz, district: districtName, isPark, allowCross });
     });
   });
 
-  // ===== 4. 跨運河優雅高拱橋 =====
-  const bridges = [
-    { x: 0, z: -25, rot: Math.PI / 2 },  // 忠孝運河中段
-    { x: 0, z: 25, rot: Math.PI / 2 },   // 仁愛運河中段
-    { x: -25, z: 0, rot: 0 },            // 復興運河中段
-    { x: 25, z: 0, rot: 0 },             // 敦化運河中段
-    { x: 50, z: 25, rot: Math.PI / 2 },  // 通往 101 橋
-    { x: -50, z: 25, rot: Math.PI / 2 }  // 通往紀念堂橋
-  ];
-  bridges.forEach((br) => {
-    cityGroup.add(createCanalBridge(br.x, br.z, br.rot, lanternMat));
+  // ===== 4. 跨運河高拱橋（散布在各段運河中間） =====
+  const bridgeGroup = new THREE.Group();
+  WORLD_CONFIG.ewCanals.slice(1, -1).forEach((c, k) => {
+    centers.forEach((cx, j) => {
+      if ((j + k) % 3 === 0) {
+        bridgeGroup.add(createCanalBridge(cx, c.z, Math.PI / 2, lanternMat));
+      }
+    });
   });
+  WORLD_CONFIG.nsCanals.slice(1, -1).forEach((c, k) => {
+    centers.forEach((cz, j) => {
+      if ((j + k + 1) % 3 === 0) {
+        bridgeGroup.add(createCanalBridge(c.x, cz, 0, lanternMat));
+      }
+    });
+  });
+  cityGroup.add(bakeStatic(bridgeGroup));
 
   scene.add(cityGroup);
 
@@ -614,6 +623,9 @@ export function buildTaipeiCity(scene) {
     waterMat,
     windowMat,
     lanternMat,
-    updateWater
+    updateWater,
+    blocks,
+    blockTop: BLOCK_TOP,
+    streetTreeCount
   };
 }

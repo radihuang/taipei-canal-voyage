@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { WORLD_CONFIG, BOAT_TIERS } from "./config.js";
+import { WORLD_CONFIG, BOAT_TIERS, DISTRICT_GRID, DISTRICTS, TREE_NAMES, blockIndexAt } from "./config.js";
 
 export class GameUI {
   constructor({ onSelectTime, onSelectBoat }) {
@@ -166,8 +166,11 @@ export class GameUI {
     }
   }
 
+  // 顯示「行政區｜運河」與該運河的行道樹，回傳目前行政區
   updateLocationName(pos) {
-    // 找出目前最接近的東西向與南北向運河
+    const { ix, iz } = blockIndexAt(pos.x, pos.z);
+    const district = DISTRICT_GRID[iz][ix];
+
     let ew = WORLD_CONFIG.ewCanals[0];
     let minEw = Infinity;
     for (const c of WORLD_CONFIG.ewCanals) {
@@ -188,13 +191,31 @@ export class GameUI {
       }
     }
 
+    let canalText;
+    let trees;
     if (minEw < 9 && minNs < 9) {
-      this.locationTag.textContent = `${ew.name.replace("運河", "")} × ${ns.name.replace("運河", "")}`;
+      canalText = `${ew.name.replace("運河", "")} × ${ns.name.replace("運河", "")}`;
+      trees = [...new Set([...ew.trees, ...ns.trees])];
     } else if (minEw < minNs) {
-      this.locationTag.textContent = ew.name;
+      canalText = ew.name;
+      trees = ew.trees;
     } else {
-      this.locationTag.textContent = ns.name;
+      canalText = ns.name;
+      trees = ns.trees;
     }
+
+    const text = `${district}區｜${canalText}`;
+    const treeText = `行道樹：${trees.map((k) => TREE_NAMES[k]).join("、")}`;
+    if (text !== this._lastLocation || treeText !== this._lastTrees) {
+      this._lastLocation = text;
+      this._lastTrees = treeText;
+      this.locationTag.textContent = text;
+      const sub = document.createElement("span");
+      sub.className = "location-trees";
+      sub.textContent = treeText;
+      this.locationTag.appendChild(sub);
+    }
+    return district;
   }
 
   updateFloatingLabels(dt, camera, playerWorldPos, npcs, nearestNpc) {
@@ -271,61 +292,94 @@ export class GameUI {
     }
   }
 
+  // 小地圖：以玩家為中心顯示附近約 4 x 4 個街廓，並標出行政區名
   drawMinimap(playerPos, npcs, isNight) {
     const ctx = this.minimapCtx;
     const size = this.minimapCanvas.width;
-    const pad = 10;
-    const span = WORLD_CONFIG.halfExtent * 2;
-    const toMap = (v) => pad + ((v + WORLD_CONFIG.halfExtent) / span) * (size - pad * 2);
+    const view = 210; // 小地圖涵蓋的世界寬度
+    const half = view / 2;
+    const limit = WORLD_CONFIG.halfExtent + 4 - half;
+    const cx = THREE.MathUtils.clamp(playerPos.x, -limit, limit);
+    const cz = THREE.MathUtils.clamp(playerPos.z, -limit, limit);
+    const scale = size / view;
+    const toX = (x) => (x - cx + half) * scale;
+    const toY = (z) => (z - cz + half) * scale;
+    const k = size / 144; // 畫布解析度放大後，字與點跟著放大
 
     ctx.clearRect(0, 0, size, size);
-
-    // 水底背景
     ctx.fillStyle = isNight ? "#16304c" : "#5cb9c7";
     ctx.fillRect(0, 0, size, size);
 
-    // 九大建築街廓
-    const bSize = ((WORLD_CONFIG.blockHalfSize * 2) / span) * (size - pad * 2);
-    WORLD_CONFIG.blockCenters.forEach((bx, ix) => {
-      WORLD_CONFIG.blockCenters.forEach((bz, iz) => {
-        const mx = toMap(bx) - bSize / 2;
-        const my = toMap(bz) - bSize / 2;
-        if (ix === 1 && iz === 1) {
-          ctx.fillStyle = isNight ? "#33594a" : "#96bfa6"; // 大安公園
-        } else if (ix === 2 && iz === 2) {
-          ctx.fillStyle = isNight ? "#4f7a80" : "#8cc2bf"; // 台北 101 區
-        } else {
-          ctx.fillStyle = isNight ? "#34425e" : "#f2e7da";
-        }
-        ctx.fillRect(mx, my, bSize, bSize);
-      });
-    });
+    if (!this._districtCentroids) this._computeDistrictCentroids();
+
+    // 街廓（依行政區上色，公園為綠色）
+    const bSize = WORLD_CONFIG.blockHalfSize * 2 * scale;
+    for (const b of this.blocks || []) {
+      if (Math.abs(b.x - cx) > half + 20 || Math.abs(b.z - cz) > half + 20) continue;
+      if (b.isPark) {
+        ctx.fillStyle = isNight ? "#33594a" : "#96bfa6";
+      } else {
+        ctx.fillStyle = isNight ? "#34425e" : DISTRICTS[b.district].map;
+      }
+      ctx.fillRect(toX(b.x) - bSize / 2, toY(b.z) - bSize / 2, bSize, bSize);
+    }
 
     // 101 標記
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 9px sans-serif";
+    if (Math.abs(100 - cx) < half && Math.abs(50 - cz) < half) {
+      ctx.fillStyle = isNight ? "#fff" : "#3f5a6b";
+      ctx.font = `bold ${Math.round(10 * k)}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.fillText("101", toX(101.5), toY(51.5) + 3 * k);
+    }
+
+    // 行政區名
+    ctx.font = `bold ${Math.round(13 * k)}px 'Noto Sans TC', sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText("101", toMap(50), toMap(50) + 3);
+    ctx.lineWidth = 3 * k;
+    ctx.strokeStyle = isNight ? "rgba(10,20,40,0.85)" : "rgba(255,255,255,0.9)";
+    ctx.fillStyle = isNight ? "#f3e9da" : "#4a3f39";
+    for (const [name, [dx, dz]] of this._districtCentroids) {
+      if (Math.abs(dx - cx) > half || Math.abs(dz - cz) > half) continue;
+      ctx.strokeText(name, toX(dx), toY(dz) + 4 * k);
+      ctx.fillText(name, toX(dx), toY(dz) + 4 * k);
+    }
 
     // NPC 點
     for (const npc of npcs) {
-      const nx = toMap(npc.boat.group.position.x);
-      const ny = toMap(npc.boat.group.position.z);
+      const p = npc.boat.group.position;
+      if (Math.abs(p.x - cx) > half || Math.abs(p.z - cz) > half) continue;
       ctx.beginPath();
-      ctx.arc(nx, ny, npc.tier === 2 ? 3.5 : 2.6, 0, Math.PI * 2);
+      ctx.arc(toX(p.x), toY(p.z), (npc.tier === 2 ? 3.5 : 2.6) * k, 0, Math.PI * 2);
       ctx.fillStyle = npc.friended ? "#ffd166" : "#ffffff";
       ctx.fill();
     }
 
     // 玩家橘點
-    const px = toMap(playerPos.x);
-    const py = toMap(playerPos.z);
     ctx.beginPath();
-    ctx.arc(px, py, 4.8, 0, Math.PI * 2);
+    ctx.arc(toX(playerPos.x), toY(playerPos.z), 4.8 * k, 0, Math.PI * 2);
     ctx.fillStyle = "#f26b3a";
     ctx.fill();
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * k;
     ctx.strokeStyle = "#fff";
     ctx.stroke();
+  }
+
+  setBlocks(blocks) {
+    this.blocks = blocks;
+    this._districtCentroids = null;
+  }
+
+  _computeDistrictCentroids() {
+    const acc = new Map();
+    for (const b of this.blocks || []) {
+      const a = acc.get(b.district) || [0, 0, 0];
+      a[0] += b.x;
+      a[1] += b.z;
+      a[2] += 1;
+      acc.set(b.district, a);
+    }
+    this._districtCentroids = new Map(
+      [...acc].map(([name, [sx, sz, n]]) => [name, [sx / n, sz / n]])
+    );
   }
 }

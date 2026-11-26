@@ -25,9 +25,9 @@ export class NPCManager {
 
   _spawnAll() {
     NPC_ROSTER.forEach((profile, idx) => {
-      // 均勻分散在運河交叉口
-      const gx = idx % GRID.length;
-      const gz = Math.floor(idx / GRID.length) % GRID.length;
+      // 分散在整張地圖的運河交叉口
+      const gx = (idx * 3 + 1) % GRID.length;
+      const gz = (idx * 5 + 2 + Math.floor(idx / GRID.length)) % GRID.length;
       const neighbors = getAdjacentIntersections(gx, gz);
       const target = neighbors[idx % neighbors.length];
 
