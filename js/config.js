@@ -139,9 +139,12 @@ export const BOAT_TIERS = [
 ];
 
 // 紀念碑谷美學：四種時段光影與配色預設
+// 時段跟船一樣靠交友分數解鎖，門檻刻意跟船（30、80）錯開，讓玩家一直有下一個目標；
+// 每次重開都從正午開始重新解鎖（分數本來就不存檔）
 export const TIME_PRESETS = {
   dawn: {
     label: "清晨",
+    unlockScore: 15,
     sky: 0xebd8e8,
     fog: 0xf1dfe8,
     fogDensity: 0.0042,
@@ -159,6 +162,7 @@ export const TIME_PRESETS = {
   },
   noon: {
     label: "正午",
+    unlockScore: 0,
     sky: 0xcbe8f6,
     fog: 0xd6eef9,
     fogDensity: 0.0032,
@@ -176,6 +180,7 @@ export const TIME_PRESETS = {
   },
   sunset: {
     label: "夕陽",
+    unlockScore: 45,
     sky: 0xf2a88c,
     fog: 0xf2b599,
     fogDensity: 0.0046,
@@ -193,6 +198,7 @@ export const TIME_PRESETS = {
   },
   night: {
     label: "夜晚",
+    unlockScore: 100,
     sky: 0x18213a,
     fog: 0x1b2642,
     fogDensity: 0.0048,

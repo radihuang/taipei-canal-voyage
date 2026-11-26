@@ -201,7 +201,14 @@ function switchPlayerBoat(newTier, { announce = false } = {}) {
 }
 
 function addScore(points) {
+  const before = state.score;
   state.score += points;
+
+  for (const preset of Object.values(TIME_PRESETS)) {
+    if (preset.unlockScore > before && preset.unlockScore <= state.score) {
+      ui.showToast(`🎉 解鎖「${preset.label}」時段！點右上角的圖示就能切換`);
+    }
+  }
 
   // 檢查是否達成新船升級門檻
   let upgradedTier = null;
@@ -310,8 +317,13 @@ function handleBoardToggle() {
 // ===== 7. UI 與輸入控制器初始化 =====
 const ui = new GameUI({
   onSelectTime: (key) => {
+    const preset = TIME_PRESETS[key];
+    if (state.score < preset.unlockScore) {
+      ui.showToast(`累積 ${preset.unlockScore} 分即可解鎖「${preset.label}」！`, { soft: true });
+      return false;
+    }
     state.timeKey = key;
-    ui.setNightTheme(TIME_PRESETS[key].isNight);
+    ui.setNightTheme(preset.isNight);
   },
   onSelectBoat: (tier) => {
     if (state.boardedNpc) {

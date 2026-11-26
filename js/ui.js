@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { WORLD_CONFIG, BOAT_TIERS, DISTRICT_GRID, DISTRICTS, LANDMARKS, TREE_NAMES, blockIndexAt } from "./config.js";
+import { WORLD_CONFIG, BOAT_TIERS, TIME_PRESETS, DISTRICT_GRID, DISTRICTS, LANDMARKS, TREE_NAMES, blockIndexAt } from "./config.js";
 
 export class GameUI {
   constructor({ onSelectTime, onSelectBoat }) {
@@ -70,12 +70,12 @@ export class GameUI {
     this.playerBubbleEl = this._createBubbleEl();
     this.playerBubbleTimer = 0;
 
-    // 時段按鈕
+    // 時段按鈕：還沒解鎖的由 onSelectTime 回 false，畫面不換
     document.querySelectorAll(".time-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (onSelectTime(btn.dataset.time) === false) return;
         document.querySelectorAll(".time-btn").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-        onSelectTime(btn.dataset.time);
       });
     });
 
@@ -229,6 +229,15 @@ export class GameUI {
       this.nextProgEl.textContent = "滿級船長 ⚓";
       this.progressFill.style.width = "100%";
     }
+
+    document.querySelectorAll(".time-btn").forEach((btn) => {
+      const preset = TIME_PRESETS[btn.dataset.time];
+      const unlocked = score >= preset.unlockScore;
+      btn.classList.toggle("locked", !unlocked);
+      const label = unlocked ? preset.label : `${preset.label}（累積 ${preset.unlockScore} 分解鎖）`;
+      btn.setAttribute("aria-label", label);
+      btn.title = label;
+    });
 
     document.querySelectorAll(".boat-pill").forEach((pill) => {
       const t = Number(pill.dataset.tier);
@@ -814,12 +823,20 @@ export class GameUI {
 
 const GUIDE_STEPS = [
   { icon: "🕹️", title: "開船", text: "電腦用 WASD 或方向鍵；手機用左下角的搖桿。滾輪或雙指可以把視角拉近拉遠。" },
-  { icon: "👋", title: "交朋友", text: "靠近河道上的其他船，按 Space 或點右下角的「交朋友」。交友分數累積到 30 分解鎖五人帆船，80 分解鎖十人海盜船。" },
+  {
+    icon: "👋",
+    title: "交朋友",
+    text: `靠近河道上的其他船，按 Space 或點右下角的「交朋友」。交友分數累積到 ${BOAT_TIERS.slice(1).map((t) => `${t.unlockScore} 分解鎖${t.name}`).join("，")}。`
+  },
   { icon: "⛵", title: "搭別人的船", text: "靠近帆船或海盜船，按 E 或點「搭便車」，就能收起自己的船、跳上對方甲板一起漂流。" },
   { icon: "🙋", title: "載客", text: "開帆船或海盜船時，靠近岸邊舉手的人就會上船。開到他頭上寫的目的地旁的運河就送達，路程越遠分數越高，還會拿到一張在地知識卡。" },
   { icon: "❗", title: "岸邊尋寶", text: "開到岸邊的樹旁時，樹上可能冒出「！」，點一下就會發現藏在樹上的台灣動物。" },
   { icon: "📖", title: "知識卡收藏冊", text: "左上面板的「📖 知識卡」隨時打開收藏冊。覺得面板擋畫面時，點面板下方的「收起知識卡與船」，要用再展開。" },
-  { icon: "🌅", title: "換個時段", text: "右上角的四個圖示切換清晨、正午、夕陽、夜晚，夜晚窗戶和橋燈會亮起來。" }
+  {
+    icon: "🌅",
+    title: "解鎖時段",
+    text: `一開始是正午。交友分數累積到 ${["dawn", "sunset", "night"].map((k) => `${TIME_PRESETS[k].unlockScore} 分解鎖${TIME_PRESETS[k].label}`).join("、")}，之後點右上角的圖示隨時切換，夜晚窗戶和橋燈會亮起來。`
+  }
 ];
 
 // 動物卡的圖；圖檔不在時整個藏起來，不留破圖
