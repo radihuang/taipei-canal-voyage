@@ -112,6 +112,30 @@ function collectCard(key) {
     total: Object.keys(KNOWLEDGE_CARDS).length,
     isNew
   }, KNOWLEDGE_LICENSE);
+  // 剛好收齊最後一張：先讓玩家看到這張卡，再跳破關畫面
+  if (isNew && collectedCards.size === Object.keys(KNOWLEDGE_CARDS).length) {
+    saveCompletedDate();
+    setTimeout(() => ui.showFinale(), 1500);
+  }
+}
+
+// 破關日期記在瀏覽器；舊存檔已經收齊但沒有日期時，用今天
+const FINALE_DATE_KEY = "taipei-canal-voyage:completed-at";
+function saveCompletedDate() {
+  try {
+    if (!localStorage.getItem(FINALE_DATE_KEY)) localStorage.setItem(FINALE_DATE_KEY, new Date().toISOString());
+  } catch {
+    // 存不進去就每次用當天日期
+  }
+}
+function completedDate() {
+  try {
+    const saved = localStorage.getItem(FINALE_DATE_KEY);
+    if (saved && !Number.isNaN(Date.parse(saved))) return new Date(saved);
+  } catch {
+    // 同上
+  }
+  return new Date();
 }
 passengers.attachToBoat(playerBoat, BOAT_TIERS[0]);
 
@@ -342,11 +366,27 @@ ui.onTreasureClick = (id) => {
   ui.showToast(`在樹上發現了${KNOWLEDGE_CARDS[found.key].title}！`);
   collectCard(found.key);
 };
+ui.initFinale({
+  getInfo: () => ({
+    total: Object.keys(KNOWLEDGE_CARDS).length,
+    placeCount: Object.keys(KNOWLEDGE_CARDS).length - ANIMAL_KEYS.length,
+    animalCount: ANIMAL_KEYS.length,
+    animalImages: ANIMAL_KEYS.map((k) => KNOWLEDGE_CARDS[k].image),
+    date: completedDate()
+  })
+});
 ui.initCollection({
   cards: KNOWLEDGE_CARDS,
   license: KNOWLEDGE_LICENSE,
   collected: collectedCards,
-  onClear: () => clearCollected(collectedCards)
+  onClear: () => {
+    clearCollected(collectedCards);
+    try {
+      localStorage.removeItem(FINALE_DATE_KEY);
+    } catch {
+      // 讀寫不到就算了，下次收齊沿用舊日期
+    }
+  }
 });
 
 const input = new InputController({
@@ -619,5 +659,5 @@ animate();
 
 // 測試用：網址加上 ?debug 才會開放，讓自動化測試能直接移動船與加分
 if (new URLSearchParams(location.search).has("debug")) {
-  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat, getZoom: () => zoomFactor, treasures };
+  window.__game = { state, passengers, addScore, switchPlayerBoat, getBoat: () => playerBoat, getZoom: () => zoomFactor, treasures, collectCard };
 }

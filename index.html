@@ -122,6 +122,7 @@
         <ul class="knowledge-sources" id="collection-detail-sources"></ul>
       </div>
       <div class="collection-footer" id="collection-footer">
+        <button class="certificate-open hidden" id="certificate-open" type="button">🏅 查看獎狀</button>
         <button class="collection-clear" id="collection-clear" type="button">清空收藏</button>
       </div>
     </section>
@@ -192,6 +193,26 @@
         <button class="guide-skip" id="guide-skip" type="button">直接登船啟航</button>
       </div>
     </div>
+  </div>
+
+  <!-- 收齊全部知識卡的破關畫面 -->
+  <div class="finale-overlay hidden" id="finale-overlay">
+    <section class="finale-panel" role="dialog" aria-modal="true" aria-labelledby="finale-heading">
+      <button class="knowledge-close" id="finale-close" type="button" aria-label="關閉">×</button>
+      <div class="finale-eyebrow">ALL CARDS COLLECTED</div>
+      <h2 class="finale-heading" id="finale-heading">恭喜破關！</h2>
+      <p class="finale-desc" id="finale-desc"></p>
+      <div class="finale-preview">
+        <img id="finale-image" alt="獎狀：我是台北市的五星船長 aka 五星船員！" />
+        <div class="finale-loading" id="finale-loading">獎狀製作中…</div>
+      </div>
+      <div class="finale-actions">
+        <button class="guide-btn" id="finale-download" type="button" disabled>下載獎狀</button>
+        <button class="start-btn" id="finale-share" type="button" disabled>分享</button>
+      </div>
+      <p class="finale-status" id="finale-status" aria-live="polite"></p>
+      <p class="finale-hint">iPhone 按「分享」後選「儲存影像」，就會存進照片。</p>
+    </section>
   </div>
 
   <!-- iPhone 整頁被放大時才出現 -->

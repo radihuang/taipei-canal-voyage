@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { renderCertificate, shareBlob, downloadBlob } from "./certificate.js";
 import { WORLD_CONFIG, BOAT_TIERS, TIME_PRESETS, DISTRICT_GRID, DISTRICTS, LANDMARKS, TREE_NAMES, blockIndexAt } from "./config.js";
 
 export class GameUI {
@@ -552,7 +553,7 @@ export class GameUI {
     this.collectionProgressEl.textContent = `已收集 ${collected.size} / ${keys.length} 張。送乘客到目的地、在岸邊的樹上尋寶都能解鎖。`;
 
     const sections = [
-      { heading: "目的地", keys: keys.filter((k) => !k.startsWith("animal:")) },
+      { heading: "台北景點", keys: keys.filter((k) => !k.startsWith("animal:")) },
       { heading: "台灣動物", keys: keys.filter((k) => k.startsWith("animal:")) }
     ];
     this.collectionGridEl.replaceChildren();
@@ -569,10 +570,89 @@ export class GameUI {
     }
 
     this.collectionClearBtn.disabled = collected.size === 0;
+    document.getElementById("certificate-open").classList.toggle("hidden", collected.size < keys.length);
     this.collectionGridEl.classList.remove("hidden");
     this.collectionProgressEl.classList.remove("hidden");
     this.collectionFooterEl.classList.remove("hidden");
     this.collectionDetailEl.classList.add("hidden");
+  }
+
+  // ===== 破關獎狀 =====
+  initFinale({ getInfo }) {
+    this.finale = { getInfo, blob: null, url: null };
+    const overlay = document.getElementById("finale-overlay");
+    const shareBtn = document.getElementById("finale-share");
+    const downloadBtn = document.getElementById("finale-download");
+    // 提示寫在面板裡：toast 疊在破關畫面底下會看不到
+    const setStatus = (text) => (document.getElementById("finale-status").textContent = text);
+    document.getElementById("finale-close").addEventListener("click", () => this.closeFinale());
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) this.closeFinale();
+    });
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") this.closeFinale();
+      e.stopPropagation();
+    });
+    document.getElementById("certificate-open").addEventListener("click", () => {
+      this.closeCollection();
+      this.showFinale();
+    });
+    downloadBtn.addEventListener("click", () => {
+      if (!this.finale.blob) return;
+      downloadBlob(this.finale.blob);
+      setStatus("獎狀已下載");
+    });
+    shareBtn.addEventListener("click", async () => {
+      if (!this.finale.blob) return;
+      const result = await shareBlob(this.finale.blob);
+      if (result === "unsupported") {
+        downloadBlob(this.finale.blob);
+        setStatus("這個瀏覽器不能直接分享圖片，已改成下載獎狀");
+      } else if (result === "cancelled") {
+        setStatus("分享沒有完成。沒看到分享選單的話，改按「下載獎狀」");
+      } else if (result?.error) {
+        setStatus(`分享失敗（${result.error}），請改按「下載獎狀」`);
+      } else {
+        setStatus("");
+      }
+    });
+  }
+
+  async showFinale() {
+    if (!this.finale) return;
+    const info = this.finale.getInfo();
+    const overlay = document.getElementById("finale-overlay");
+    const img = document.getElementById("finale-image");
+    const loading = document.getElementById("finale-loading");
+    const buttons = [document.getElementById("finale-share"), document.getElementById("finale-download")];
+    document.getElementById("finale-desc").textContent =
+      `你收集了全部 ${info.total} 張知識卡：台北景點 ${info.placeCount} 張、台灣動物 ${info.animalCount} 張。`;
+    this.hideKnowledgeCard();
+    document.getElementById("finale-status").textContent = "";
+    overlay.classList.remove("hidden");
+    document.getElementById("finale-close").focus();
+
+    buttons.forEach((b) => (b.disabled = true));
+    loading.textContent = "獎狀製作中…";
+    loading.classList.remove("hidden");
+    img.classList.add("hidden");
+    try {
+      const blob = await renderCertificate(info);
+      if (this.finale.url) URL.revokeObjectURL(this.finale.url);
+      this.finale.blob = blob;
+      this.finale.url = URL.createObjectURL(blob);
+      img.src = this.finale.url;
+      img.classList.remove("hidden");
+      loading.classList.add("hidden");
+      buttons.forEach((b) => (b.disabled = false));
+    } catch (err) {
+      loading.textContent = `獎狀製作失敗（${err?.message || err}），重新整理後到收藏冊按「查看獎狀」再試一次`;
+    }
+  }
+
+  closeFinale() {
+    document.getElementById("finale-overlay").classList.add("hidden");
+    document.activeElement?.blur();
   }
 
   _collectionTile(key, card, isCollected) {
