@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>台北運河漫遊｜Taipei Canal Voyage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- 2D Floating Speech & Friend Labels Layer -->
+  <div id="bubbles-layer"></div>
+
+  <!-- Top HUD -->
+  <header class="hud-top">
+    <!-- Left: Progress & Boat Switcher -->
+    <div class="glass-card status-panel">
+      <div class="stats-row">
+        <div class="stat-item">
+          <span class="stat-label">交友分數</span>
+          <span class="stat-value" id="score-val">0</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">認識船友</span>
+          <span class="stat-value" id="friends-val">0</span>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-text">
+          <span id="next-tier-label">距離 5人帆船</span>
+          <span id="next-tier-progress">0 / 30</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="boat-switcher" id="boat-switcher">
+        <button class="boat-pill active" data-tier="0">
+          <span class="pill-name">SUP</span>
+          <span class="pill-cap">1人</span>
+        </button>
+        <button class="boat-pill locked" data-tier="1">
+          <span class="pill-name">🔒 帆船</span>
+          <span class="pill-cap">5人</span>
+        </button>
+        <button class="boat-pill locked" data-tier="2">
+          <span class="pill-name">🔒 海盜船</span>
+          <span class="pill-cap">10人</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: Time of Day & Minimap -->
+    <div class="right-column">
+      <div class="glass-card time-panel" id="time-selector">
+        <button class="time-btn" data-time="dawn">清晨</button>
+        <button class="time-btn active" data-time="noon">正午</button>
+        <button class="time-btn" data-time="sunset">夕陽</button>
+        <button class="time-btn" data-time="night">夜晚</button>
+      </div>
+
+      <div class="glass-card minimap-card">
+        <canvas id="minimap" width="144" height="144"></canvas>
+        <div class="location-tag" id="location-tag">大安水岸</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toast / Upgrade Banner -->
+  <div id="toast-container"></div>
+
+  <!-- Passenger Mode Banner -->
+  <div class="passenger-banner hidden" id="passenger-banner">
+    <span id="passenger-text">正在搭乘 船友 的船（你的橘船已暫時收起）</span>
+  </div>
+
+  <!-- Interaction Prompt Bar -->
+  <div class="interact-bar hidden" id="interact-bar">
+    <div class="nearby-info">
+      <span class="nearby-badge" id="nearby-boat-type">帆船</span>
+      <span class="nearby-name" id="nearby-name">大安咖啡師小魚</span>
+    </div>
+    <div class="interact-hint" id="interact-hint">按 Space 交朋友 · 按 E 登船</div>
+  </div>
+
+  <!-- Mobile & Quick Action Controls -->
+  <div class="controls-layer">
+    <!-- Virtual Joystick (Bottom Left) -->
+    <div class="joystick-zone" id="joystick-zone">
+      <div class="joystick-base" id="joystick-base">
+        <div class="joystick-knob" id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- Action Buttons (Bottom Right) -->
+    <div class="action-buttons">
+      <button class="action-btn btn-greet" id="btn-greet" disabled>
+        <span class="btn-icon">👋</span>
+        <span class="btn-label">交朋友</span>
+        <span class="key-cap">Space</span>
+      </button>
+      <button class="action-btn btn-board" id="btn-board" disabled>
+        <span class="btn-icon" id="board-icon">⛵</span>
+        <span class="btn-label" id="board-label">搭便車</span>
+        <span class="key-cap">E</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Welcome Overlay -->
+  <div class="welcome-overlay" id="welcome-overlay">
+    <div class="welcome-card">
+      <div class="welcome-eyebrow">TAIPEI CANAL VOYAGE</div>
+      <h1>台北運河漫遊</h1>
+      <p class="welcome-desc">
+        當忠孝、仁愛、信義、敦化化為靜謐運河。<br />
+        划著你的橘色小船穿梭在幾何台北，結識岸邊與河道上的船友，從單人 SUP 升級至五人帆船與十人海盜船，也能隨時收起自己的船，跳上別人的甲板一起看夕陽。
+      </p>
+      <div class="welcome-tips">
+        <div class="tip-chip"><strong>移動</strong> WASD / 方向鍵 / 左下搖桿</div>
+        <div class="tip-chip"><strong>交朋友</strong> 靠近按 Space 或點擊 👋</div>
+        <div class="tip-chip"><strong>搭別人的船</strong> 靠近帆船/海盜船按 E</div>
+        <div class="tip-chip"><strong>視角</strong> 滾輪或雙指可縮放遠近</div>
+      </div>
+      <button class="start-btn" id="start-btn">下水啟航</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
